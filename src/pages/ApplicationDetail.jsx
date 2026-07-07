@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { yen } from "../utils/calc";
 
-const STATUS_FLOW = ["pending", "reviewing", "approved", "rejected", "contract_pending"];
 const STATUS_LABELS = {
   pending: "審査待ち", reviewing: "審査中",
   approved: "承認済", rejected: "差戻し", contract_pending: "契約手続き中",
@@ -35,7 +34,13 @@ export default function ApplicationDetail() {
       review_comment: comment || null,
       reviewed_at: new Date().toISOString(),
     }).eq("id", id);
-    if (!error) setApp(a => ({ ...a, status: newStatus, review_comment: comment }));
+    if (!error) {
+      setApp(a => ({ ...a, status: newStatus, review_comment: comment }));
+      await supabase.from("audit_logs").insert([{
+        action: "update_application_status", target_type: "application", target_id: id,
+        details: { old: app.status, new: newStatus, comment: comment || null },
+      }]);
+    }
     setSaving(false);
   }
 
@@ -43,8 +48,14 @@ export default function ApplicationDetail() {
     if (!contractStart) { alert("契約開始日を入力してください"); return; }
     setConverting(true);
 
-    const { error: tErr } = await supabase.from("tenancies").insert([{
+    // 物件台帳に同一住所の物件があれば紐付ける
+    const { data: props } = await supabase.from("properties")
+      .select("id").eq("property_address", app.property_address).eq("status", "active").limit(1);
+    const propertyId = props?.[0]?.id || null;
+
+    const { data: tenancy, error: tErr } = await supabase.from("tenancies").insert([{
       application_id: app.id,
+      property_id: propertyId,
       name: app.name,
       email: app.email,
       basic_salary: app.basic_salary,
@@ -55,22 +66,19 @@ export default function ApplicationDetail() {
       contract_start: contractStart,
       contract_end: contractEnd || null,
       status: "active",
-    }]);
+    }]).select("id").single();
 
     if (tErr) { alert("入居者登録に失敗しました: " + tErr.message); setConverting(false); return; }
 
     // 最初の家賃履歴を登録
-    const { data: tenancy } = await supabase.from("tenancies").select("id").eq("application_id", app.id).single();
-    if (tenancy) {
-      await supabase.from("rent_history").insert([{
-        tenancy_id: tenancy.id,
-        effective_date: contractStart,
-        actual_rent: app.actual_rent,
-        subsidy_limit: app.subsidy_limit,
-        company_burden: app.company_burden,
-        personal_burden: app.personal_burden,
-      }]);
-    }
+    await supabase.from("rent_history").insert([{
+      tenancy_id: tenancy.id,
+      effective_date: contractStart,
+      actual_rent: app.actual_rent,
+      subsidy_limit: app.subsidy_limit,
+      company_burden: app.company_burden,
+      personal_burden: app.personal_burden,
+    }]);
 
     await supabase.from("applications").update({ status: "approved" }).eq("id", id);
     await supabase.from("audit_logs").insert([{

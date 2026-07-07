@@ -17,5 +17,11 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // 日本語UIの全角スペース（U+3000）を許可
+      'no-irregular-whitespace': ['error', { skipStrings: true, skipTemplates: true, skipJSXText: true }],
+      // effectから非同期のデータ取得関数（モーダル保存後の再読み込みと共用）を呼ぶパターンを許容
+      'react-hooks/set-state-in-effect': 'warn',
+    },
   },
 ])

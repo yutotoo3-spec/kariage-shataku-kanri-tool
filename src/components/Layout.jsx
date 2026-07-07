@@ -12,7 +12,8 @@ const navItems = [
   { to: "/", label: "ダッシュボード", icon: "🏠" },
   { to: "/applications", label: "申請一覧", icon: "📋" },
   { to: "/applications/new", label: "申請登録", icon: "➕" },
-  { to: "/tenants", label: "入居者台帳", icon: "🏠" },
+  { to: "/tenants", label: "入居者台帳", icon: "👤" },
+  { to: "/properties", label: "物件台帳", icon: "🏢" },
   { to: "/monthly", label: "月次処理", icon: "📅" },
 ];
 
