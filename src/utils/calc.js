@@ -34,3 +34,18 @@ export function yen(amount) {
   if (amount == null) return "—";
   return `¥${Math.round(amount).toLocaleString()}`;
 }
+
+// 解約通知期限（契約満了日の nヶ月前。月末はその月の末日にクランプする）
+export function calcNoticeDeadline(contractEnd, noticePeriodMonths, baseDate = new Date()) {
+  if (!contractEnd || !noticePeriodMonths) return null;
+  const [y, m, d] = contractEnd.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const target = new Date(y, m - 1 - noticePeriodMonths, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(d, lastDay));
+  const pad = n => String(n).padStart(2, "0");
+  const deadlineStr = `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}`;
+  const today = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+  const daysLeft = Math.round((target - today) / 86400000);
+  return { deadlineStr, daysLeft };
+}

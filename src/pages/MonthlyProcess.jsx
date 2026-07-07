@@ -7,12 +7,9 @@ export default function MonthlyProcess() {
   const [yearMonth, setYearMonth] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
   const [salaryChecked, setSalaryChecked] = useState(false);
 
   const isApril = yearMonth?.endsWith("-04");
-
-  useEffect(() => { if (yearMonth) loadRows(); }, [yearMonth]);
 
   async function loadRows() {
     setLoading(true);
@@ -41,9 +38,10 @@ export default function MonthlyProcess() {
     });
 
     setRows(newRows);
-    setConfirmed(false);
     setLoading(false);
   }
+
+  useEffect(() => { if (yearMonth) loadRows(); }, [yearMonth]);
 
   function updateRow(idx, key, val) {
     setRows(prev => prev.map((r, i) => {
@@ -58,14 +56,17 @@ export default function MonthlyProcess() {
   }
 
   function exportCSV() {
+    const esc = v => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
     const header = "氏名,物件名,実賃料,本人負担額,会社負担額,備考\n";
     const body = rows.map(r => {
       const personal = r.adjusted_personal ?? r.personal_burden;
       const company = r.actual_rent - personal;
-      return `${r.name},${r.property_name},${r.actual_rent},${personal},${company},${r.note || ""}`;
+      return [r.name, r.property_name, r.actual_rent, personal, company, r.note || ""].map(esc).join(",");
     }).join("\n");
-    const bom = "﻿";
-    const blob = new Blob([bom + header + body], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob(["\uFEFF" + header + body], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { calcSubsidyLimit, calcBurden, checkRentCeiling, yen } from "../utils/calc";
+import { calcSubsidyLimit, calcBurden } from "../utils/calc";
 import CalcPreview from "../components/CalcPreview";
 
 const INITIAL = {
