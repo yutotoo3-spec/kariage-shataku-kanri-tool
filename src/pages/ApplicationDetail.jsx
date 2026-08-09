@@ -48,14 +48,8 @@ export default function ApplicationDetail() {
     if (!contractStart) { alert("契約開始日を入力してください"); return; }
     setConverting(true);
 
-    // 物件台帳に同一住所の物件があれば紐付ける
-    const { data: props } = await supabase.from("properties")
-      .select("id").eq("property_address", app.property_address).eq("status", "active").limit(1);
-    const propertyId = props?.[0]?.id || null;
-
     const { data: tenancy, error: tErr } = await supabase.from("tenancies").insert([{
       application_id: app.id,
-      property_id: propertyId,
       name: app.name,
       email: app.email,
       basic_salary: app.basic_salary,

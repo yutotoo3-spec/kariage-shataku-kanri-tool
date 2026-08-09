@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { calcNoticeDeadline } from "../utils/calc";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ pending: 0, pendingDrafts: 0, active: 0, moveOutSoon: 0, properties: 0 });
+  const [stats, setStats] = useState({ pending: 0, pendingDrafts: 0, active: 0, moveOutSoon: 0 });
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [{ data: apps }, { data: tenants }, { data: properties }, { data: drafts }] = await Promise.all([
+      const [{ data: apps }, { data: tenants }, { data: drafts }] = await Promise.all([
         supabase.from("applications").select("id, status"),
         supabase.from("tenancies").select("id, name, contract_end, status, basic_salary, family_type"),
-        supabase.from("properties").select("id, property_name, company_contract_end, notice_period_months, status").eq("status", "active"),
         supabase.from("application_drafts").select("id, status").eq("status", "submitted"),
       ]);
 
@@ -52,27 +50,6 @@ export default function Dashboard() {
         }
       });
 
-      // 物件の解約通知期限アラート
-      (properties || []).forEach(p => {
-        const notice = calcNoticeDeadline(p.company_contract_end, p.notice_period_months, today);
-        if (!notice) return;
-        if (notice.daysLeft < 0) {
-          newAlerts.push({
-            type: "danger",
-            title: `${p.property_name}：解約通知期限を${Math.abs(notice.daysLeft)}日超過しています`,
-            desc: `契約満了：${p.company_contract_end}　解約予告：${p.notice_period_months}ヶ月前`,
-            link: `/properties/${p.id}`,
-          });
-        } else if (notice.daysLeft <= 90) {
-          newAlerts.push({
-            type: "warning",
-            title: `${p.property_name}：解約通知期限まであと${notice.daysLeft}日`,
-            desc: `契約満了：${p.company_contract_end}　${notice.deadlineStr}までに通知が必要`,
-            link: `/properties/${p.id}`,
-          });
-        }
-      });
-
       // 退去期限超過チェック
       (tenants || []).filter(t => t.status === "move_out_pending").forEach(t => {
         if (!t.move_out_date) return;
@@ -92,7 +69,6 @@ export default function Dashboard() {
         pendingDrafts: (drafts || []).length,
         active,
         moveOutSoon: (tenants || []).filter(t => t.status === "move_out_pending").length,
-        properties: (properties || []).length,
       });
       setAlerts(newAlerts);
       setLoading(false);
@@ -110,12 +86,11 @@ export default function Dashboard() {
       </div>
 
       {/* サマリーカード */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16, marginBottom: 28 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
         <StatCard label="フォーム未確認" value={stats.pendingDrafts} unit="件" color="#EF4444" link="/application-drafts" />
         <StatCard label="審査待ち申請" value={stats.pending} unit="件" color="#3B82F6" link="/applications" />
         <StatCard label="入居中" value={stats.active} unit="名" color="#10B981" link="/tenants" />
         <StatCard label="退去手続き中" value={stats.moveOutSoon} unit="名" color="#F59E0B" link="/tenants" />
-        <StatCard label="契約物件数" value={stats.properties ?? 0} unit="件" color="#8B5CF6" link="/properties" />
       </div>
 
       {/* アラート */}
@@ -154,8 +129,6 @@ export default function Dashboard() {
         <h2 style={{ fontSize: 14, fontWeight: 700, color: "#1E293B", marginBottom: 12 }}>クイックアクション</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
           <QuickAction to="/application-drafts" label="申請フォーム受付を確認する" desc="本人が送信した内容を確認して申請登録" />
-          <QuickAction to="/applications/new" label="新規申請を登録する" desc="採用時・既存社員の社宅申請を登録" />
-          <QuickAction to="/properties/new" label="物件を登録する" desc="社宅物件・解約条件・書類を管理" />
           <QuickAction to="/monthly" label="月次処理を行う" desc="控除額の確認・CSV出力" />
         </div>
       </div>
