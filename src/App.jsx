@@ -13,9 +13,6 @@ import PublicApply from "./pages/PublicApply";
 import TenantLedger from "./pages/TenantLedger";
 import TenantDetail from "./pages/TenantDetail";
 import MonthlyProcess from "./pages/MonthlyProcess";
-import PropertyList from "./pages/PropertyList";
-import PropertyNew from "./pages/PropertyNew";
-import PropertyDetail from "./pages/PropertyDetail";
 
 function ProtectedRoute({ children, session }) {
   if (!session) return <Navigate to="/login" replace />;
@@ -53,9 +50,6 @@ export default function App() {
         <Route path="/tenants" element={<ProtectedRoute session={session}><TenantLedger /></ProtectedRoute>} />
         <Route path="/tenants/:id" element={<ProtectedRoute session={session}><TenantDetail /></ProtectedRoute>} />
         <Route path="/monthly" element={<ProtectedRoute session={session}><MonthlyProcess /></ProtectedRoute>} />
-        <Route path="/properties" element={<ProtectedRoute session={session}><PropertyList /></ProtectedRoute>} />
-        <Route path="/properties/new" element={<ProtectedRoute session={session}><PropertyNew /></ProtectedRoute>} />
-        <Route path="/properties/:id" element={<ProtectedRoute session={session}><PropertyDetail /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
