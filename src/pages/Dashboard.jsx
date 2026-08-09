@@ -4,16 +4,17 @@ import { supabase } from "../lib/supabase";
 import { calcNoticeDeadline } from "../utils/calc";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ pending: 0, active: 0, moveOutSoon: 0, properties: 0 });
+  const [stats, setStats] = useState({ pending: 0, pendingDrafts: 0, active: 0, moveOutSoon: 0, properties: 0 });
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [{ data: apps }, { data: tenants }, { data: properties }] = await Promise.all([
+      const [{ data: apps }, { data: tenants }, { data: properties }, { data: drafts }] = await Promise.all([
         supabase.from("applications").select("id, status"),
         supabase.from("tenancies").select("id, name, contract_end, status, basic_salary, family_type"),
         supabase.from("properties").select("id, property_name, company_contract_end, notice_period_months, status").eq("status", "active"),
+        supabase.from("application_drafts").select("id, status").eq("status", "submitted"),
       ]);
 
       const pending = (apps || []).filter(a => ["pending", "reviewing"].includes(a.status)).length;
@@ -88,6 +89,7 @@ export default function Dashboard() {
 
       setStats({
         pending,
+        pendingDrafts: (drafts || []).length,
         active,
         moveOutSoon: (tenants || []).filter(t => t.status === "move_out_pending").length,
         properties: (properties || []).length,
@@ -108,7 +110,8 @@ export default function Dashboard() {
       </div>
 
       {/* サマリーカード */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16, marginBottom: 28 }}>
+        <StatCard label="フォーム未確認" value={stats.pendingDrafts} unit="件" color="#EF4444" link="/application-drafts" />
         <StatCard label="審査待ち申請" value={stats.pending} unit="件" color="#3B82F6" link="/applications" />
         <StatCard label="入居中" value={stats.active} unit="名" color="#10B981" link="/tenants" />
         <StatCard label="退去手続き中" value={stats.moveOutSoon} unit="名" color="#F59E0B" link="/tenants" />
@@ -150,6 +153,7 @@ export default function Dashboard() {
       <div style={{ marginTop: 28 }}>
         <h2 style={{ fontSize: 14, fontWeight: 700, color: "#1E293B", marginBottom: 12 }}>クイックアクション</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+          <QuickAction to="/application-drafts" label="申請フォーム受付を確認する" desc="本人が送信した内容を確認して申請登録" />
           <QuickAction to="/applications/new" label="新規申請を登録する" desc="採用時・既存社員の社宅申請を登録" />
           <QuickAction to="/properties/new" label="物件を登録する" desc="社宅物件・解約条件・書類を管理" />
           <QuickAction to="/monthly" label="月次処理を行う" desc="控除額の確認・CSV出力" />
