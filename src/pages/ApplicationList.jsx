@@ -40,17 +40,9 @@ export default function ApplicationList() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>申請一覧</h1>
-          <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>全{apps.length}件</p>
-        </div>
-        <Link to="/applications/new" style={{
-          padding: "10px 20px", background: "#3B82F6", color: "#fff",
-          borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: "none",
-        }}>
-          ＋ 新規申請登録
-        </Link>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>申請一覧</h1>
+        <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>全{apps.length}件</p>
       </div>
 
       {/* フィルタータブ */}

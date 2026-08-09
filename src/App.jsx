@@ -5,7 +5,6 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ApplicationList from "./pages/ApplicationList";
-import ApplicationNew from "./pages/ApplicationNew";
 import ApplicationDetail from "./pages/ApplicationDetail";
 import ApplicationDraftList from "./pages/ApplicationDraftList";
 import ApplicationDraftDetail from "./pages/ApplicationDraftDetail";
@@ -43,7 +42,6 @@ export default function App() {
         <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/" element={<ProtectedRoute session={session}><Dashboard /></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute session={session}><ApplicationList /></ProtectedRoute>} />
-        <Route path="/applications/new" element={<ProtectedRoute session={session}><ApplicationNew /></ProtectedRoute>} />
         <Route path="/applications/:id" element={<ProtectedRoute session={session}><ApplicationDetail /></ProtectedRoute>} />
         <Route path="/application-drafts" element={<ProtectedRoute session={session}><ApplicationDraftList /></ProtectedRoute>} />
         <Route path="/application-drafts/:id" element={<ProtectedRoute session={session}><ApplicationDraftDetail /></ProtectedRoute>} />

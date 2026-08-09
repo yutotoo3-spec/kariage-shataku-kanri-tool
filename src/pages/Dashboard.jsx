@@ -129,7 +129,6 @@ export default function Dashboard() {
         <h2 style={{ fontSize: 14, fontWeight: 700, color: "#1E293B", marginBottom: 12 }}>クイックアクション</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
           <QuickAction to="/application-drafts" label="申請フォーム受付を確認する" desc="本人が送信した内容を確認して申請登録" />
-          <QuickAction to="/applications/new" label="新規申請を登録する" desc="採用時・既存社員の社宅申請を登録" />
           <QuickAction to="/monthly" label="月次処理を行う" desc="控除額の確認・CSV出力" />
         </div>
       </div>
