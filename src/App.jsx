@@ -7,6 +7,9 @@ import Dashboard from "./pages/Dashboard";
 import ApplicationList from "./pages/ApplicationList";
 import ApplicationNew from "./pages/ApplicationNew";
 import ApplicationDetail from "./pages/ApplicationDetail";
+import ApplicationDraftList from "./pages/ApplicationDraftList";
+import ApplicationDraftDetail from "./pages/ApplicationDraftDetail";
+import PublicApply from "./pages/PublicApply";
 import TenantLedger from "./pages/TenantLedger";
 import TenantDetail from "./pages/TenantDetail";
 import MonthlyProcess from "./pages/MonthlyProcess";
@@ -39,11 +42,14 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/apply" element={<PublicApply />} />
         <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/" element={<ProtectedRoute session={session}><Dashboard /></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute session={session}><ApplicationList /></ProtectedRoute>} />
         <Route path="/applications/new" element={<ProtectedRoute session={session}><ApplicationNew /></ProtectedRoute>} />
         <Route path="/applications/:id" element={<ProtectedRoute session={session}><ApplicationDetail /></ProtectedRoute>} />
+        <Route path="/application-drafts" element={<ProtectedRoute session={session}><ApplicationDraftList /></ProtectedRoute>} />
+        <Route path="/application-drafts/:id" element={<ProtectedRoute session={session}><ApplicationDraftDetail /></ProtectedRoute>} />
         <Route path="/tenants" element={<ProtectedRoute session={session}><TenantLedger /></ProtectedRoute>} />
         <Route path="/tenants/:id" element={<ProtectedRoute session={session}><TenantDetail /></ProtectedRoute>} />
         <Route path="/monthly" element={<ProtectedRoute session={session}><MonthlyProcess /></ProtectedRoute>} />
