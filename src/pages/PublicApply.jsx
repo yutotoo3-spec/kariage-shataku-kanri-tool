@@ -123,7 +123,7 @@ export default function PublicApply() {
         </Section>
 
         <Section title="ご本人情報">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             <Field label="氏名" required error={errors.name}>
               <input value={form.name} onChange={e => set("name", e.target.value)}
                 style={inputStyle(errors.name)} placeholder="山田 太郎" />
@@ -152,7 +152,7 @@ export default function PublicApply() {
         </Section>
 
         <Section title="物件情報">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             <Field label="物件名" required error={errors.property_name}>
               <input value={form.property_name} onChange={e => set("property_name", e.target.value)}
                 style={inputStyle(errors.property_name)} placeholder="○○マンション 101号室" />
