@@ -117,8 +117,8 @@ export default function Dashboard() {
 
       {alerts.length === 0 && (
         <div style={{
-          padding: "20px", background: "#F0FDF4", border: "1px solid #BBF7D0",
-          borderRadius: 10, fontSize: 13, color: "#15803D",
+          padding: "20px", background: "#EFF6FF", border: "1px solid #BFDBFE",
+          borderRadius: 10, fontSize: 13, color: "#1D4ED8",
         }}>
           現在、対応が必要なアラートはありません
         </div>
