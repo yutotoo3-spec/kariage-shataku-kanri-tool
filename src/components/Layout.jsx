@@ -4,16 +4,16 @@ import { supabase } from "../lib/supabase";
 const C = {
   sidebar: "#1E293B",
   sidebarActive: "#3B82F6",
-  sidebarText: "#94A3B8",
+  sidebarText: "#CBD5E1",
   sidebarHover: "#334155",
 };
 
 const navItems = [
-  { to: "/", label: "ダッシュボード", icon: "🏠" },
-  { to: "/applications", label: "申請一覧", icon: "📋" },
-  { to: "/application-drafts", label: "申請フォーム受付", icon: "📥" },
-  { to: "/tenants", label: "入居者台帳", icon: "👤" },
-  { to: "/monthly", label: "月次処理", icon: "📅" },
+  { to: "/", label: "ダッシュボード" },
+  { to: "/applications", label: "申請一覧" },
+  { to: "/application-drafts", label: "申請フォーム受付" },
+  { to: "/tenants", label: "入居者台帳" },
+  { to: "/monthly", label: "月次処理" },
 ];
 
 export default function Layout({ children }) {
@@ -43,18 +43,17 @@ export default function Layout({ children }) {
         </div>
 
         <nav style={{ flex: 1, padding: "8px 0" }}>
-          {navItems.map(({ to, label, icon }) => (
+          {navItems.map(({ to, label }) => (
             <NavLink key={to} to={to} end={to === "/"} style={({ isActive }) => ({
-              display: "flex", alignItems: "center", gap: 10,
+              display: "block",
               padding: "10px 16px",
               color: isActive ? "#fff" : C.sidebarText,
               background: isActive ? C.sidebarActive : "transparent",
-              fontSize: 13, fontWeight: isActive ? 600 : 400,
+              fontSize: 13, fontWeight: isActive ? 600 : 500,
               borderRadius: 6, margin: "1px 8px",
               transition: "all 0.15s",
             })}>
-              <span>{icon}</span>
-              <span>{label}</span>
+              {label}
             </NavLink>
           ))}
         </nav>

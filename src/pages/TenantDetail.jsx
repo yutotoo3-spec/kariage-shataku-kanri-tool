@@ -55,10 +55,10 @@ export default function TenantDetail() {
         </Grid>
         {tenant.status === "active" && (
           <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
-            <ActionBtn label="基本給を更新（4月）" onClick={() => setShowSalaryModal(true)} color="#8B5CF6" />
-            <ActionBtn label="家族区分を変更" onClick={() => setShowFamilyModal(true)} color="#3B82F6" />
-            <ActionBtn label="実賃料を変更" onClick={() => setShowRentModal(true)} color="#10B981" />
-            <ActionBtn label="退去申請" onClick={() => setShowMoveOutModal(true)} color="#EF4444" />
+            <ActionBtn label="基本給を更新（4月）" onClick={() => setShowSalaryModal(true)} />
+            <ActionBtn label="家族区分を変更" onClick={() => setShowFamilyModal(true)} />
+            <ActionBtn label="実賃料を変更" onClick={() => setShowRentModal(true)} />
+            <ActionBtn label="退去申請" onClick={() => setShowMoveOutModal(true)} variant="danger" />
           </div>
         )}
       </Card>
@@ -248,7 +248,7 @@ function SalaryModal({ tenant, rentHistory, onClose, onSave }) {
         </div>
       </div>
     )}
-    <button onClick={handle} disabled={saving} style={{ ...btnPrimary, background: "#8B5CF6" }}>{saving ? "更新中..." : "4月分として保存"}</button>
+    <button onClick={handle} disabled={saving} style={btnPrimary}>{saving ? "更新中..." : "4月分として保存"}</button>
   </Modal>;
 }
 
@@ -347,9 +347,15 @@ function Field({ label, children }) {
     </div>
   );
 }
-function ActionBtn({ label, onClick, color }) {
+function ActionBtn({ label, onClick, variant = "default" }) {
+  const danger = variant === "danger";
   return (
-    <button onClick={onClick} style={{ padding: "8px 16px", background: color + "15", color, border: `1px solid ${color}40`, borderRadius: 8, fontSize: 12, fontWeight: 600 }}>
+    <button onClick={onClick} style={{
+      padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+      background: danger ? "#FEF2F2" : "#fff",
+      color: danger ? "#DC2626" : "#475569",
+      border: `1px solid ${danger ? "#FECACA" : "#E2E8F0"}`,
+    }}>
       {label}
     </button>
   );
