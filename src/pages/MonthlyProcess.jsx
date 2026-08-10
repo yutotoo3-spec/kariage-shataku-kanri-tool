@@ -158,7 +158,7 @@ export default function MonthlyProcess() {
                     />
                   )}
                 </td>
-                <td style={{ ...td, color: r.adjusted_personal != null ? "#10B981" : "#94A3B8", fontWeight: 600 }}>
+                <td style={{ ...td, color: r.adjusted_personal != null ? "#3B82F6" : "#94A3B8", fontWeight: 600 }}>
                   {r.adjusted_personal != null ? yen(r.adjusted_personal) : "—"}
                 </td>
                 <td style={td}>
@@ -180,7 +180,7 @@ export default function MonthlyProcess() {
           onClick={exportCSV}
           disabled={isApril && !salaryChecked}
           style={{
-            padding: "11px 28px", background: (isApril && !salaryChecked) ? "#E2E8F0" : "#10B981",
+            padding: "11px 28px", background: (isApril && !salaryChecked) ? "#E2E8F0" : "#3B82F6",
             color: (isApril && !salaryChecked) ? "#94A3B8" : "#fff",
             border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: (isApril && !salaryChecked) ? "not-allowed" : "pointer",
           }}

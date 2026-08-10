@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { yen } from "../utils/calc";
 
 const STATUS_LABELS = {
-  active: { label: "入居中", color: "#10B981", bg: "#F0FDF4" },
+  active: { label: "入居中", color: "#3B82F6", bg: "#EFF6FF" },
   move_out_pending: { label: "退去手続き中", color: "#F59E0B", bg: "#FFFBEB" },
   moved_out: { label: "退去済", color: "#94A3B8", bg: "#F8FAFC" },
 };

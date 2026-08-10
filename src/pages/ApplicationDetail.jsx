@@ -184,7 +184,7 @@ export default function ApplicationDetail() {
               <input type="date" value={contractEnd} onChange={e => setContractEnd(e.target.value)} style={inputStyle} />
             </div>
           </div>
-          <button onClick={handleConvertToTenancy} disabled={converting} style={{ ...btnPrimary, background: "#10B981" }}>
+          <button onClick={handleConvertToTenancy} disabled={converting} style={btnPrimary}>
             {converting ? "登録中..." : "入居者台帳に登録する"}
           </button>
         </Card>
@@ -193,7 +193,7 @@ export default function ApplicationDetail() {
       {/* 審査済みの場合 */}
       {app.status === "approved" && (
         <Card title="審査結果">
-          <div style={{ padding: "10px 14px", background: "#F0FDF4", borderRadius: 8, fontSize: 13, color: "#15803D" }}>
+          <div style={{ padding: "10px 14px", background: "#EFF6FF", borderRadius: 8, fontSize: 13, color: "#1D4ED8" }}>
             ✅ 承認済みです。入居者台帳への登録が完了しています。
           </div>
           {app.review_comment && (

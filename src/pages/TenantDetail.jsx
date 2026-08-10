@@ -91,8 +91,8 @@ export default function TenantDetail() {
             </thead>
             <tbody>
               {rentHistory.map((h, i) => (
-                <tr key={h.id} style={{ borderBottom: "1px solid #F1F5F9", background: i === 0 ? "#F0FDF4" : undefined }}>
-                  <td style={td}>{h.effective_date} {i === 0 && <span style={{ fontSize: 10, color: "#10B981", fontWeight: 700 }}>現在</span>}</td>
+                <tr key={h.id} style={{ borderBottom: "1px solid #F1F5F9", background: i === 0 ? "#EFF6FF" : undefined }}>
+                  <td style={td}>{h.effective_date} {i === 0 && <span style={{ fontSize: 10, color: "#3B82F6", fontWeight: 700 }}>現在</span>}</td>
                   <td style={td}>{yen(h.actual_rent)}</td>
                   <td style={td}>{yen(h.subsidy_limit)}</td>
                   <td style={td}>{yen(h.company_burden)}</td>
@@ -361,7 +361,7 @@ function ActionBtn({ label, onClick, variant = "default" }) {
   );
 }
 function StatusBadge({ status }) {
-  const map = { active: ["入居中", "#10B981", "#F0FDF4"], move_out_pending: ["退去手続き中", "#F59E0B", "#FFFBEB"], moved_out: ["退去済", "#94A3B8", "#F8FAFC"] };
+  const map = { active: ["入居中", "#3B82F6", "#EFF6FF"], move_out_pending: ["退去手続き中", "#F59E0B", "#FFFBEB"], moved_out: ["退去済", "#94A3B8", "#F8FAFC"] };
   const [l, c, bg] = map[status] || map.moved_out;
   return <span style={{ padding: "4px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600, background: bg, color: c }}>{l}</span>;
 }

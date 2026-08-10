@@ -104,8 +104,8 @@ export default function ApplicationDraftDetail() {
       {!editable && (
         <div style={{
           marginBottom: 16, padding: "10px 14px", borderRadius: 8, fontSize: 13,
-          background: draft.status === "converted" ? "#F0FDF4" : "#F8FAFC",
-          color: draft.status === "converted" ? "#15803D" : "#64748B",
+          background: draft.status === "converted" ? "#EFF6FF" : "#F8FAFC",
+          color: draft.status === "converted" ? "#1D4ED8" : "#64748B",
         }}>
           {draft.status === "converted" ? "✅ この受付はすでに申請登録済みです" : "この受付は却下済みです"}
           {draft.review_note && ` — ${draft.review_note}`}

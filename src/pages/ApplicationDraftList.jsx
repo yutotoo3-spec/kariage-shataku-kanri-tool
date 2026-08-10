@@ -5,7 +5,7 @@ import { yen } from "../utils/calc";
 
 const STATUS_LABELS = {
   submitted: { label: "未確認", color: "#F59E0B", bg: "#FFFBEB" },
-  converted: { label: "登録済", color: "#10B981", bg: "#F0FDF4" },
+  converted: { label: "登録済", color: "#3B82F6", bg: "#EFF6FF" },
   dismissed: { label: "却下", color: "#94A3B8", bg: "#F8FAFC" },
 };
 const SCENE_LABELS = { new_hire: "採用時", existing: "既存社員" };
@@ -51,10 +51,10 @@ export default function ApplicationDraftList() {
           </p>
         </div>
         <button onClick={copyPublicUrl} style={{
-          padding: "10px 20px", background: copied ? "#10B981" : "#1E293B", color: "#fff",
+          padding: "10px 20px", background: "#1E293B", color: "#fff",
           borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer",
         }}>
-          {copied ? "コピーしました" : "🔗 公開フォームURLをコピー"}
+          {copied ? "コピーしました" : "公開フォームURLをコピー"}
         </button>
       </div>
 

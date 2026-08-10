@@ -6,7 +6,7 @@ import { yen } from "../utils/calc";
 const STATUS_LABELS = {
   pending: { label: "審査待ち", color: "#F59E0B", bg: "#FFFBEB" },
   reviewing: { label: "審査中", color: "#3B82F6", bg: "#EFF6FF" },
-  approved: { label: "承認済", color: "#10B981", bg: "#F0FDF4" },
+  approved: { label: "承認済", color: "#3B82F6", bg: "#EFF6FF" },
   rejected: { label: "差戻し", color: "#EF4444", bg: "#FEF2F2" },
   contract_pending: { label: "契約手続き中", color: "#3B82F6", bg: "#EFF6FF" },
 };
