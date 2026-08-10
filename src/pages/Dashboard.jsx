@@ -87,10 +87,10 @@ export default function Dashboard() {
 
       {/* サマリーカード */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
-        <StatCard label="フォーム未確認" value={stats.pendingDrafts} unit="件" color="#EF4444" link="/application-drafts" />
-        <StatCard label="審査待ち申請" value={stats.pending} unit="件" color="#3B82F6" link="/applications" />
-        <StatCard label="入居中" value={stats.active} unit="名" color="#10B981" link="/tenants" />
-        <StatCard label="退去手続き中" value={stats.moveOutSoon} unit="名" color="#F59E0B" link="/tenants" />
+        <StatCard label="フォーム未確認" value={stats.pendingDrafts} unit="件" link="/application-drafts" />
+        <StatCard label="審査待ち申請" value={stats.pending} unit="件" link="/applications" />
+        <StatCard label="入居中" value={stats.active} unit="名" link="/tenants" />
+        <StatCard label="退去手続き中" value={stats.moveOutSoon} unit="名" link="/tenants" />
       </div>
 
       {/* アラート */}
@@ -136,12 +136,12 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ label, value, unit, color, link }) {
+function StatCard({ label, value, unit, link }) {
   return (
     <Link to={link} style={{
       background: "#fff", borderRadius: 12, padding: "20px 24px",
       boxShadow: "0 1px 4px rgba(0,0,0,0.06)", textDecoration: "none",
-      borderTop: `3px solid ${color}`, display: "block",
+      border: "1px solid #E2E8F0", display: "block",
     }}>
       <div style={{ fontSize: 12, color: "#64748B", marginBottom: 8 }}>{label}</div>
       <div style={{ fontSize: 32, fontWeight: 700, color: "#1E293B" }}>

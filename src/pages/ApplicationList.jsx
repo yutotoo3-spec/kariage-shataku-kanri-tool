@@ -8,7 +8,7 @@ const STATUS_LABELS = {
   reviewing: { label: "審査中", color: "#3B82F6", bg: "#EFF6FF" },
   approved: { label: "承認済", color: "#10B981", bg: "#F0FDF4" },
   rejected: { label: "差戻し", color: "#EF4444", bg: "#FEF2F2" },
-  contract_pending: { label: "契約手続き中", color: "#8B5CF6", bg: "#F5F3FF" },
+  contract_pending: { label: "契約手続き中", color: "#3B82F6", bg: "#EFF6FF" },
 };
 
 const SCENE_LABELS = { new_hire: "採用時", existing: "既存社員" };
