@@ -86,7 +86,7 @@ export default function Dashboard() {
       </div>
 
       {/* サマリーカード */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16, marginBottom: 28 }}>
         <StatCard label="フォーム未確認" value={stats.pendingDrafts} unit="件" link="/application-drafts" />
         <StatCard label="審査待ち申請" value={stats.pending} unit="件" link="/applications" />
         <StatCard label="入居中" value={stats.active} unit="名" link="/tenants" />
@@ -127,7 +127,7 @@ export default function Dashboard() {
       {/* クイックアクション */}
       <div style={{ marginTop: 28 }}>
         <h2 style={{ fontSize: 14, fontWeight: 700, color: "#1E293B", marginBottom: 12 }}>クイックアクション</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
           <QuickAction to="/application-drafts" label="申請フォーム受付を確認する" desc="本人が送信した内容を確認して申請登録" />
           <QuickAction to="/monthly" label="月次処理を行う" desc="控除額の確認・CSV出力" />
         </div>

@@ -26,10 +26,11 @@ export default function Login() {
     <div style={{
       minHeight: "100vh", background: "#F1F5F9",
       display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "24px 16px",
     }}>
       <div style={{
         background: "#fff", borderRadius: 16,
-        padding: "40px 36px", width: 380,
+        padding: "40px 36px", width: 380, maxWidth: "100%",
         boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
       }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>

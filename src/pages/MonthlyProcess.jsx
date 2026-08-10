@@ -117,7 +117,7 @@ export default function MonthlyProcess() {
       )}
 
       {/* 合計 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
         <div style={{ background: "#fff", borderRadius: 10, padding: "14px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
           <div style={{ fontSize: 11, color: "#64748B" }}>会社負担合計（月）</div>
           <div style={{ fontSize: 22, fontWeight: 700, color: "#1E293B", marginTop: 4 }}>{yen(totalCompany)}</div>

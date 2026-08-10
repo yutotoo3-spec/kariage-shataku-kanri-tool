@@ -94,7 +94,7 @@ export default function ApplicationDraftDetail() {
 
   return (
     <div style={{ maxWidth: 700 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
         <button onClick={() => navigate("/application-drafts")} style={{ background: "none", border: "none", color: "#3B82F6", fontSize: 13, padding: 0 }}>
           ← 一覧に戻る
         </button>
@@ -116,7 +116,7 @@ export default function ApplicationDraftDetail() {
         <p style={{ fontSize: 12, color: "#94A3B8", marginBottom: 16 }}>
           本人からの送信内容です。表記ゆれ・誤字があれば修正してから登録してください
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
           <Field label="氏名">
             <input value={form.name} onChange={e => set("name", e.target.value)} style={inputStyle} disabled={!editable} />
           </Field>

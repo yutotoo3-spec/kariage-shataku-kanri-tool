@@ -32,7 +32,7 @@ export default function TenantDetail() {
 
   return (
     <div style={{ maxWidth: 760 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
         <button onClick={() => navigate("/tenants")} style={{ background: "none", border: "none", color: "#3B82F6", fontSize: 13, padding: 0 }}>
           ← 台帳に戻る
         </button>
@@ -81,27 +81,29 @@ export default function TenantDetail() {
         {rentHistory.length === 0 ? (
           <p style={{ fontSize: 13, color: "#94A3B8" }}>履歴がありません</p>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
-                {["適用開始日", "実賃料", "限度額", "会社負担", "本人負担", "変更日時"].map(h => (
-                  <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748B" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rentHistory.map((h, i) => (
-                <tr key={h.id} style={{ borderBottom: "1px solid #F1F5F9", background: i === 0 ? "#EFF6FF" : undefined }}>
-                  <td style={td}>{h.effective_date} {i === 0 && <span style={{ fontSize: 10, color: "#3B82F6", fontWeight: 700 }}>現在</span>}</td>
-                  <td style={td}>{yen(h.actual_rent)}</td>
-                  <td style={td}>{yen(h.subsidy_limit)}</td>
-                  <td style={td}>{yen(h.company_burden)}</td>
-                  <td style={{ ...td, fontWeight: 600 }}>{yen(h.personal_burden)}</td>
-                  <td style={td}>{h.changed_at?.slice(0, 16).replace("T", " ")}</td>
+          <div style={{ overflow: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
+                  {["適用開始日", "実賃料", "限度額", "会社負担", "本人負担", "変更日時"].map(h => (
+                    <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748B", whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rentHistory.map((h, i) => (
+                  <tr key={h.id} style={{ borderBottom: "1px solid #F1F5F9", background: i === 0 ? "#EFF6FF" : undefined }}>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}>{h.effective_date} {i === 0 && <span style={{ fontSize: 10, color: "#3B82F6", fontWeight: 700 }}>現在</span>}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}>{yen(h.actual_rent)}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}>{yen(h.subsidy_limit)}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}>{yen(h.company_burden)}</td>
+                    <td style={{ ...td, fontWeight: 600, whiteSpace: "nowrap" }}>{yen(h.personal_burden)}</td>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}>{h.changed_at?.slice(0, 16).replace("T", " ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
 
@@ -329,7 +331,7 @@ function Card({ title, children }) {
   );
 }
 function Grid({ children }) {
-  return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 20px" }}>{children}</div>;
+  return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px 20px" }}>{children}</div>;
 }
 function Item({ label, value, bold, style }) {
   return (

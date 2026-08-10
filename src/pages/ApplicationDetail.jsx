@@ -88,7 +88,7 @@ export default function ApplicationDetail() {
 
   return (
     <div style={{ maxWidth: 700 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
         <button onClick={() => navigate("/applications")} style={{ background: "none", border: "none", color: "#3B82F6", fontSize: 13, padding: 0 }}>
           ← 一覧に戻る
         </button>
@@ -174,7 +174,7 @@ export default function ApplicationDetail() {
           <p style={{ fontSize: 13, color: "#64748B", marginBottom: 16 }}>
             契約締結後、以下を入力して入居者台帳に登録してください。
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 16 }}>
             <div>
               <label style={labelStyle}>契約開始日 <span style={{ color: "#EF4444" }}>*</span></label>
               <input type="date" value={contractStart} onChange={e => setContractStart(e.target.value)} style={inputStyle} />
@@ -224,7 +224,7 @@ function Card({ title, children }) {
   );
 }
 function Grid({ children }) {
-  return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 20px" }}>{children}</div>;
+  return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px 20px" }}>{children}</div>;
 }
 function Item({ label, value, bold, style }) {
   return (

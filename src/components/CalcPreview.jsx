@@ -16,7 +16,7 @@ export default function CalcPreview({ basicSalary, familyType, actualRent }) {
       <div style={{ fontSize: 11, fontWeight: 700, color: withinCeiling ? "#1D4ED8" : "#DC2626", letterSpacing: "0.06em", marginBottom: 12 }}>
         {withinCeiling ? "自動計算結果" : "⚠️ 自動計算結果（上限超過）"}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12 }}>
         <CalcItem label="補助対象限度額" value={yen(subsidyLimit)} />
         <CalcItem label="会社負担額（月）" value={yen(companyBurden)} highlight />
         <CalcItem label="本人負担額（月）" value={yen(personalBurden)} highlight />
