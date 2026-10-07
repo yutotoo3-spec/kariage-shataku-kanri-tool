@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
-import { calcSubsidyLimit, calcBurden } from "../utils/calc";
+import { calcSubsidyLimit, calcBurden, calcActualRent, calcTotalPersonalDeduction, yen } from "../utils/calc";
 import { useSettings } from "../hooks/useSettings";
+import { MONTHLY_COST_FIELDS, emptyMonthlyCosts, parseMonthlyCosts } from "../utils/monthlyCosts";
 import CalcPreview from "../components/CalcPreview";
 
 const INITIAL = {
@@ -9,7 +10,8 @@ const INITIAL = {
   name: "", email: "", basic_salary: "", family_type: "single",
   join_date: "",
   property_name: "", property_address: "",
-  floor_area: "", actual_rent: "",
+  floor_area: "",
+  ...emptyMonthlyCosts(),
   desired_move_in: "",
   note: "",
 };
@@ -29,7 +31,9 @@ export default function PublicApply() {
     if (!form.basic_salary || form.basic_salary <= 0) e.basic_salary = "必須";
     if (!form.property_name) e.property_name = "必須";
     if (!form.property_address) e.property_address = "必須";
-    if (!form.actual_rent || form.actual_rent <= 0) e.actual_rent = "必須";
+    if (!form.rent || form.rent <= 0) e.rent = "必須";
+    if (form.common_fee === "") e.common_fee = "必須（なければ0）";
+    if (form.management_fee === "") e.management_fee = "必須（なければ0）";
     if (form.floor_area && form.floor_area > settings.floor_area_limit) e.floor_area = `${settings.floor_area_limit}㎡以下でなければなりません`;
     if (!form.desired_move_in) e.desired_move_in = "必須";
     return e;
@@ -42,9 +46,10 @@ export default function PublicApply() {
 
     setSubmitting(true);
     const salary = parseInt(form.basic_salary);
-    const rent = parseInt(form.actual_rent);
+    const costs = parseMonthlyCosts(form);
+    const actualRent = calcActualRent(costs);
     const subsidyLimit = calcSubsidyLimit(salary, form.family_type, settings);
-    const { companyBurden, personalBurden } = calcBurden(rent, subsidyLimit, settings);
+    const { companyBurden, personalBurden } = calcBurden(actualRent, subsidyLimit, settings);
 
     const { error } = await supabase.from("application_drafts").insert([{
       scene: form.scene,
@@ -56,7 +61,8 @@ export default function PublicApply() {
       property_name: form.property_name,
       property_address: form.property_address,
       floor_area: form.floor_area ? parseFloat(form.floor_area) : null,
-      actual_rent: rent,
+      ...costs,
+      actual_rent: actualRent,
       desired_move_in: form.desired_move_in,
       note: form.note || null,
       subsidy_limit: subsidyLimit,
@@ -69,7 +75,8 @@ export default function PublicApply() {
   }
 
   const salary = parseInt(form.basic_salary) || 0;
-  const rent = parseInt(form.actual_rent) || 0;
+  const costs = parseMonthlyCosts(form);
+  const actualRent = calcActualRent(costs);
 
   if (done) {
     return (
@@ -170,20 +177,31 @@ export default function PublicApply() {
               <input value={form.property_address} onChange={e => set("property_address", e.target.value)}
                 style={inputStyle(errors.property_address)} placeholder="東京都渋谷区○○1-2-3" />
             </Field>
-            <Field label="実賃料（月額・円）" required error={errors.actual_rent}>
-              <input type="number" value={form.actual_rent} onChange={e => set("actual_rent", e.target.value)}
-                style={inputStyle(errors.actual_rent)} placeholder="150000" min={0} />
-              <p style={{ fontSize: 11, color: "#64748B", marginTop: 4 }}>家賃＋共益費＋管理費の合計</p>
-            </Field>
             <Field label="入居希望日" required error={errors.desired_move_in}>
               <input type="date" value={form.desired_move_in} onChange={e => set("desired_move_in", e.target.value)}
                 style={inputStyle(errors.desired_move_in)} />
             </Field>
           </div>
+        </Section>
 
-          {salary > 0 && rent > 0 && (
+        <Section title="毎月の費用">
+          <p style={{ fontSize: 11, color: "#94A3B8", marginBottom: 16 }}>
+            家賃・共益費・管理費は必須です。それ以外は該当がなければ空欄のままで構いません（0として扱います）
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+            {MONTHLY_COST_FIELDS.map(f => (
+              <Field key={f.key} label={f.label} required={f.required} error={errors[f.key]}>
+                <input type="number" value={form[f.key]} onChange={e => set(f.key, e.target.value)}
+                  style={inputStyle(errors[f.key])} placeholder={f.placeholder || "0"} min={0} />
+                {f.note && <p style={{ fontSize: 11, color: "#64748B", marginTop: 4 }}>{f.note}</p>}
+              </Field>
+            ))}
+          </div>
+
+          {salary > 0 && actualRent > 0 && (
             <div style={{ marginTop: 16 }}>
-              <CalcPreview basicSalary={salary} familyType={form.family_type} actualRent={rent} settings={settings} />
+              <CalcPreview basicSalary={salary} familyType={form.family_type} actualRent={actualRent} settings={settings} />
+              <MonthlyDeductionNote costs={costs} salary={salary} familyType={form.family_type} actualRent={actualRent} settings={settings} />
             </div>
           )}
         </Section>
@@ -217,6 +235,17 @@ function PageShell({ children }) {
         {children}
       </div>
     </div>
+  );
+}
+
+function MonthlyDeductionNote({ costs, salary, familyType, actualRent, settings }) {
+  const subsidyLimit = calcSubsidyLimit(salary, familyType, settings);
+  const { personalBurden } = calcBurden(actualRent, subsidyLimit, settings);
+  const total = calcTotalPersonalDeduction(personalBurden, costs);
+  return (
+    <p style={{ fontSize: 11, color: "#64748B", marginTop: 8 }}>
+      ※ 上記に加えて駐車場代・町内会費等の本人負担の毎月費用を含めた、給与からの控除見込み合計は <strong>{yen(total)}</strong> です
+    </p>
   );
 }
 

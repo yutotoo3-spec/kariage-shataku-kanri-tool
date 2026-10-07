@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { yen } from "../utils/calc";
+import { yen, calcTotalPersonalDeduction } from "../utils/calc";
 import { useSettings } from "../hooks/useSettings";
+import { MONTHLY_COST_FIELDS, parseMonthlyCosts } from "../utils/monthlyCosts";
 
 const STATUS_LABELS = {
   pending: "審査待ち", reviewing: "審査中",
@@ -62,6 +63,7 @@ export default function ApplicationDetail() {
       contract_start: contractStart,
       contract_end: contractEnd || null,
       status: "active",
+      ...parseMonthlyCosts(app),
     }]).select("id").single();
 
     if (tErr) { alert("入居者登録に失敗しました: " + tErr.message); setConverting(false); return; }
@@ -124,6 +126,14 @@ export default function ApplicationDetail() {
             ⚠️ 床面積が{settings.floor_area_limit}㎡を超えています（規程第7条）
           </div>
         )}
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 11, color: "#94A3B8", marginBottom: 8 }}>毎月の費用の内訳</div>
+          <Grid>
+            {MONTHLY_COST_FIELDS.filter(f => app[f.key] > 0).map(f => (
+              <Item key={f.key} label={f.label.replace(/（.*/, "")} value={yen(app[f.key])} />
+            ))}
+          </Grid>
+        </div>
       </Card>
 
       {/* 計算結果 */}
@@ -132,6 +142,7 @@ export default function ApplicationDetail() {
           <Item label="補助対象限度額" value={yen(app.subsidy_limit)} />
           <Item label="会社負担額（月）" value={yen(app.company_burden)} bold />
           <Item label="本人負担額（月）" value={yen(app.personal_burden)} bold />
+          <Item label="本人負担の毎月費用を含めた控除見込み合計" value={yen(calcTotalPersonalDeduction(app.personal_burden, app))} bold />
         </Grid>
         {app.actual_rent > app.subsidy_limit * settings.rent_ceiling_multiplier && (
           <div style={{ marginTop: 12, padding: "8px 12px", background: "#FEF2F2", borderRadius: 8, fontSize: 12, color: "#DC2626" }}>
