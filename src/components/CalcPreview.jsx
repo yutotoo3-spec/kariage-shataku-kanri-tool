@@ -1,11 +1,11 @@
-import { calcSubsidyLimit, calcBurden, checkRentCeiling, yen } from "../utils/calc";
+import { calcSubsidyLimit, calcBurden, checkRentCeiling, yen, DEFAULT_SETTINGS } from "../utils/calc";
 
-export default function CalcPreview({ basicSalary, familyType, actualRent }) {
+export default function CalcPreview({ basicSalary, familyType, actualRent, settings = DEFAULT_SETTINGS }) {
   if (!basicSalary || !actualRent) return null;
 
-  const subsidyLimit = calcSubsidyLimit(basicSalary, familyType);
-  const { companyBurden, personalBurden } = calcBurden(actualRent, subsidyLimit);
-  const withinCeiling = checkRentCeiling(actualRent, subsidyLimit);
+  const subsidyLimit = calcSubsidyLimit(basicSalary, familyType, settings);
+  const { companyBurden, personalBurden } = calcBurden(actualRent, subsidyLimit, settings);
+  const withinCeiling = checkRentCeiling(actualRent, subsidyLimit, settings);
 
   return (
     <div style={{
@@ -23,7 +23,7 @@ export default function CalcPreview({ basicSalary, familyType, actualRent }) {
       </div>
       {!withinCeiling && (
         <div style={{ marginTop: 12, fontSize: 12, color: "#DC2626", fontWeight: 500 }}>
-          実賃料が補助対象限度額の1.5倍（{yen(Math.floor(subsidyLimit * 1.5))}）を超えています。規程上、承認は推奨されません。
+          実賃料が補助対象限度額の{settings.rent_ceiling_multiplier}倍（{yen(Math.floor(subsidyLimit * settings.rent_ceiling_multiplier))}）を超えています。規程上、承認は推奨されません。
         </div>
       )}
     </div>

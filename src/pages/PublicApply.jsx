@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { calcSubsidyLimit, calcBurden } from "../utils/calc";
+import { useSettings } from "../hooks/useSettings";
 import CalcPreview from "../components/CalcPreview";
 
 const INITIAL = {
@@ -14,6 +15,7 @@ const INITIAL = {
 };
 
 export default function PublicApply() {
+  const { settings } = useSettings();
   const [form, setForm] = useState(INITIAL);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
@@ -28,7 +30,7 @@ export default function PublicApply() {
     if (!form.property_name) e.property_name = "必須";
     if (!form.property_address) e.property_address = "必須";
     if (!form.actual_rent || form.actual_rent <= 0) e.actual_rent = "必須";
-    if (form.floor_area && form.floor_area > 99) e.floor_area = "99㎡以下でなければなりません";
+    if (form.floor_area && form.floor_area > settings.floor_area_limit) e.floor_area = `${settings.floor_area_limit}㎡以下でなければなりません`;
     if (!form.desired_move_in) e.desired_move_in = "必須";
     return e;
   }
@@ -41,8 +43,8 @@ export default function PublicApply() {
     setSubmitting(true);
     const salary = parseInt(form.basic_salary);
     const rent = parseInt(form.actual_rent);
-    const subsidyLimit = calcSubsidyLimit(salary, form.family_type);
-    const { companyBurden, personalBurden } = calcBurden(rent, subsidyLimit);
+    const subsidyLimit = calcSubsidyLimit(salary, form.family_type, settings);
+    const { companyBurden, personalBurden } = calcBurden(rent, subsidyLimit, settings);
 
     const { error } = await supabase.from("application_drafts").insert([{
       scene: form.scene,
@@ -138,8 +140,8 @@ export default function PublicApply() {
             </Field>
             <Field label="家族区分" required>
               <select value={form.family_type} onChange={e => set("family_type", e.target.value)} style={inputStyle()}>
-                <option value="single">単身者（限度額 = 基本給÷5）</option>
-                <option value="family">家族帯同者（限度額 = 基本給÷4）</option>
+                <option value="single">単身者（限度額 = 基本給÷{Math.round(1 / settings.subsidy_ratio_single)}）</option>
+                <option value="family">家族帯同者（限度額 = 基本給÷{Math.round(1 / settings.subsidy_ratio_family)}）</option>
               </select>
             </Field>
             {form.scene === "new_hire" && (
@@ -159,9 +161,9 @@ export default function PublicApply() {
             </Field>
             <Field label="床面積（㎡）" error={errors.floor_area}>
               <input type="number" value={form.floor_area} onChange={e => set("floor_area", e.target.value)}
-                style={inputStyle(errors.floor_area)} placeholder="50" min={0} max={99} step={0.01} />
-              {form.floor_area > 99 && (
-                <p style={{ fontSize: 11, color: "#DC2626", marginTop: 4 }}>規程上99㎡以下が条件です</p>
+                style={inputStyle(errors.floor_area)} placeholder="50" min={0} max={settings.floor_area_limit} step={0.01} />
+              {form.floor_area > settings.floor_area_limit && (
+                <p style={{ fontSize: 11, color: "#DC2626", marginTop: 4 }}>規程上{settings.floor_area_limit}㎡以下が条件です</p>
               )}
             </Field>
             <Field label="物件住所" required error={errors.property_address} style={{ gridColumn: "1 / -1" }}>
@@ -181,7 +183,7 @@ export default function PublicApply() {
 
           {salary > 0 && rent > 0 && (
             <div style={{ marginTop: 16 }}>
-              <CalcPreview basicSalary={salary} familyType={form.family_type} actualRent={rent} />
+              <CalcPreview basicSalary={salary} familyType={form.family_type} actualRent={rent} settings={settings} />
             </div>
           )}
         </Section>
