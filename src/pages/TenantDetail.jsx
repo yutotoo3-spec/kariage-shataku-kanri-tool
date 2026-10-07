@@ -2,12 +2,19 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { calcSubsidyLimit, calcBurden, yen } from "../utils/calc";
+import { useSettings } from "../hooks/useSettings";
 
-const FAMILY_LABELS = { single: "単身者（基本給÷5）", family: "家族帯同者（基本給÷4）" };
+function familyLabels(settings) {
+  return {
+    single: `単身者（基本給÷${Math.round(1 / settings.subsidy_ratio_single)}）`,
+    family: `家族帯同者（基本給÷${Math.round(1 / settings.subsidy_ratio_family)}）`,
+  };
+}
 
 export default function TenantDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { settings } = useSettings();
   const [tenant, setTenant] = useState(null);
   const [rentHistory, setRentHistory] = useState([]);
   const [showRentModal, setShowRentModal] = useState(false);
@@ -46,7 +53,7 @@ export default function TenantDetail() {
           <Item label="氏名" value={tenant.name} bold />
           <Item label="メール" value={tenant.email || "—"} />
           <Item label="基本給月額" value={yen(tenant.basic_salary)} />
-          <Item label="家族区分" value={FAMILY_LABELS[tenant.family_type]} />
+          <Item label="家族区分" value={familyLabels(settings)[tenant.family_type]} />
           <Item label="物件名" value={tenant.property_name} />
           <Item label="床面積" value={tenant.floor_area ? `${tenant.floor_area}㎡` : "—"} />
           <Item label="物件住所" value={tenant.property_address} style={{ gridColumn: "1 / -1" }} />
@@ -119,16 +126,16 @@ export default function TenantDetail() {
       )}
 
       {/* モーダル群 */}
-      {showRentModal && <RentModal tenant={tenant} onClose={() => setShowRentModal(false)} onSave={loadData} />}
-      {showFamilyModal && <FamilyModal tenant={tenant} onClose={() => setShowFamilyModal(false)} onSave={loadData} />}
+      {showRentModal && <RentModal tenant={tenant} settings={settings} onClose={() => setShowRentModal(false)} onSave={loadData} />}
+      {showFamilyModal && <FamilyModal tenant={tenant} settings={settings} onClose={() => setShowFamilyModal(false)} onSave={loadData} />}
       {showMoveOutModal && <MoveOutModal tenant={tenant} onClose={() => setShowMoveOutModal(false)} onSave={() => { loadData(); navigate("/tenants"); }} />}
-      {showSalaryModal && <SalaryModal tenant={tenant} rentHistory={rentHistory} onClose={() => setShowSalaryModal(false)} onSave={loadData} />}
+      {showSalaryModal && <SalaryModal tenant={tenant} rentHistory={rentHistory} settings={settings} onClose={() => setShowSalaryModal(false)} onSave={loadData} />}
     </div>
   );
 }
 
 // 実賃料変更モーダル
-function RentModal({ tenant, onClose, onSave }) {
+function RentModal({ tenant, settings, onClose, onSave }) {
   const [effectiveDate, setEffectiveDate] = useState("");
   const [newRent, setNewRent] = useState("");
   const [note, setNote] = useState("");
@@ -137,8 +144,8 @@ function RentModal({ tenant, onClose, onSave }) {
   async function handle() {
     if (!effectiveDate || !newRent) { alert("適用開始日と新しい実賃料を入力してください"); return; }
     setSaving(true);
-    const subsidyLimit = calcSubsidyLimit(tenant.basic_salary, tenant.family_type);
-    const { companyBurden, personalBurden } = calcBurden(parseInt(newRent), subsidyLimit);
+    const subsidyLimit = calcSubsidyLimit(tenant.basic_salary, tenant.family_type, settings);
+    const { companyBurden, personalBurden } = calcBurden(parseInt(newRent), subsidyLimit, settings);
     await supabase.from("rent_history").insert([{
       tenancy_id: tenant.id,
       effective_date: effectiveDate,
@@ -172,7 +179,7 @@ function RentModal({ tenant, onClose, onSave }) {
 }
 
 // 家族区分変更モーダル
-function FamilyModal({ tenant, onClose, onSave }) {
+function FamilyModal({ tenant, settings, onClose, onSave }) {
   const [familyType, setFamilyType] = useState(tenant.family_type);
   const [saving, setSaving] = useState(false);
 
@@ -192,8 +199,8 @@ function FamilyModal({ tenant, onClose, onSave }) {
     <p style={{ fontSize: 13, color: "#64748B", marginBottom: 16 }}>結婚・出産等で家族区分が変わった場合は変更してください。次の月次処理から新しい限度額が反映されます。</p>
     <Field label="新しい家族区分">
       <select value={familyType} onChange={e => setFamilyType(e.target.value)} style={inputStyle}>
-        <option value="single">単身者（限度額 = 基本給÷5）</option>
-        <option value="family">家族帯同者（限度額 = 基本給÷4）</option>
+        <option value="single">単身者（限度額 = 基本給÷{Math.round(1 / settings.subsidy_ratio_single)}）</option>
+        <option value="family">家族帯同者（限度額 = 基本給÷{Math.round(1 / settings.subsidy_ratio_family)}）</option>
       </select>
     </Field>
     <button onClick={handle} disabled={saving} style={btnPrimary}>{saving ? "保存中..." : "変更を保存"}</button>
@@ -201,13 +208,13 @@ function FamilyModal({ tenant, onClose, onSave }) {
 }
 
 // 基本給更新モーダル（4月用）
-function SalaryModal({ tenant, rentHistory, onClose, onSave }) {
+function SalaryModal({ tenant, rentHistory, settings, onClose, onSave }) {
   const [newSalary, setNewSalary] = useState(tenant.basic_salary);
   const [saving, setSaving] = useState(false);
   const current = rentHistory[0];
 
-  const newSubsidyLimit = calcSubsidyLimit(parseInt(newSalary) || 0, tenant.family_type);
-  const newBurden = current ? calcBurden(current.actual_rent, newSubsidyLimit) : null;
+  const newSubsidyLimit = calcSubsidyLimit(parseInt(newSalary) || 0, tenant.family_type, settings);
+  const newBurden = current ? calcBurden(current.actual_rent, newSubsidyLimit, settings) : null;
 
   async function handle() {
     if (!newSalary) return;

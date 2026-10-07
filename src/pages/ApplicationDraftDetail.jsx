@@ -2,13 +2,20 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { calcSubsidyLimit, calcBurden } from "../utils/calc";
+import { useSettings } from "../hooks/useSettings";
 import CalcPreview from "../components/CalcPreview";
 
-const FAMILY_LABELS = { single: "単身者（限度額 = 基本給÷5）", family: "家族帯同者（限度額 = 基本給÷4）" };
+function familyLabels(settings) {
+  return {
+    single: `単身者（限度額 = 基本給÷${Math.round(1 / settings.subsidy_ratio_single)}）`,
+    family: `家族帯同者（限度額 = 基本給÷${Math.round(1 / settings.subsidy_ratio_family)}）`,
+  };
+}
 
 export default function ApplicationDraftDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { settings } = useSettings();
   const [draft, setDraft] = useState(null);
   const [form, setForm] = useState(null);
   const [processing, setProcessing] = useState(false);
@@ -26,8 +33,8 @@ export default function ApplicationDraftDetail() {
     setProcessing(true);
     const salary = parseInt(form.basic_salary);
     const rent = parseInt(form.actual_rent);
-    const subsidyLimit = calcSubsidyLimit(salary, form.family_type);
-    const { companyBurden, personalBurden } = calcBurden(rent, subsidyLimit);
+    const subsidyLimit = calcSubsidyLimit(salary, form.family_type, settings);
+    const { companyBurden, personalBurden } = calcBurden(rent, subsidyLimit, settings);
 
     const { data: { session } } = await supabase.auth.getSession();
     const reviewerEmail = session?.user?.email || null;
@@ -128,7 +135,7 @@ export default function ApplicationDraftDetail() {
           </Field>
           <Field label="家族区分">
             <select value={form.family_type} onChange={e => set("family_type", e.target.value)} style={inputStyle} disabled={!editable}>
-              {Object.entries(FAMILY_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {Object.entries(familyLabels(settings)).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </Field>
           {form.scene === "new_hire" && (
@@ -162,7 +169,7 @@ export default function ApplicationDraftDetail() {
 
         {salary > 0 && rent > 0 && (
           <div style={{ marginTop: 16 }}>
-            <CalcPreview basicSalary={salary} familyType={form.family_type} actualRent={rent} />
+            <CalcPreview basicSalary={salary} familyType={form.family_type} actualRent={rent} settings={settings} />
           </div>
         )}
       </Card>

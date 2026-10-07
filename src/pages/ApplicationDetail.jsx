@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { yen } from "../utils/calc";
+import { useSettings } from "../hooks/useSettings";
 
 const STATUS_LABELS = {
   pending: "審査待ち", reviewing: "審査中",
@@ -13,6 +14,7 @@ const SCENE_LABELS = { new_hire: "採用時（新入社員）", existing: "既�
 export default function ApplicationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { settings } = useSettings();
   const [app, setApp] = useState(null);
   const [comment, setComment] = useState("");
   const [newStatus, setNewStatus] = useState("");
@@ -117,9 +119,9 @@ export default function ApplicationDetail() {
           <Item label="実賃料（月額）" value={yen(app.actual_rent)} />
           <Item label="入居希望日" value={app.desired_move_in} />
         </Grid>
-        {app.floor_area > 99 && (
+        {app.floor_area > settings.floor_area_limit && (
           <div style={{ marginTop: 12, padding: "8px 12px", background: "#FEF2F2", borderRadius: 8, fontSize: 12, color: "#DC2626" }}>
-            ⚠️ 床面積が99㎡を超えています（規程第7条）
+            ⚠️ 床面積が{settings.floor_area_limit}㎡を超えています（規程第7条）
           </div>
         )}
       </Card>
@@ -131,9 +133,9 @@ export default function ApplicationDetail() {
           <Item label="会社負担額（月）" value={yen(app.company_burden)} bold />
           <Item label="本人負担額（月）" value={yen(app.personal_burden)} bold />
         </Grid>
-        {app.actual_rent > app.subsidy_limit * 1.5 && (
+        {app.actual_rent > app.subsidy_limit * settings.rent_ceiling_multiplier && (
           <div style={{ marginTop: 12, padding: "8px 12px", background: "#FEF2F2", borderRadius: 8, fontSize: 12, color: "#DC2626" }}>
-            ⚠️ 実賃料が限度額の1.5倍（{yen(Math.floor(app.subsidy_limit * 1.5))}）を超えています（規程上、承認は推奨されません）
+            ⚠️ 実賃料が限度額の{settings.rent_ceiling_multiplier}倍（{yen(Math.floor(app.subsidy_limit * settings.rent_ceiling_multiplier))}）を超えています（規程上、承認は推奨されません）
           </div>
         )}
       </Card>
