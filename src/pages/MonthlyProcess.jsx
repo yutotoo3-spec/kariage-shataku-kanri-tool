@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { calcProration, yen } from "../utils/calc";
+import { calcProration, calcTotalPersonalDeduction, calcTotalCompanyCost, yen } from "../utils/calc";
 
 export default function MonthlyProcess() {
   const today = new Date();
@@ -27,8 +27,8 @@ export default function MonthlyProcess() {
         name: t.name,
         property_name: t.property_name,
         actual_rent: rent.actual_rent || 0,
-        personal_burden: rent.personal_burden || 0,
-        company_burden: rent.company_burden || 0,
+        personal_burden: calcTotalPersonalDeduction(rent.personal_burden || 0, t),
+        company_burden: calcTotalCompanyCost(rent.company_burden || 0, t),
         is_moving_out: isMovingOut,
         move_out_date: t.move_out_date,
         proration_days: null,
@@ -63,8 +63,7 @@ export default function MonthlyProcess() {
     const header = "氏名,物件名,実賃料,本人負担額,会社負担額,備考\n";
     const body = rows.map(r => {
       const personal = r.adjusted_personal ?? r.personal_burden;
-      const company = r.actual_rent - personal;
-      return [r.name, r.property_name, r.actual_rent, personal, company, r.note || ""].map(esc).join(",");
+      return [r.name, r.property_name, r.actual_rent, personal, r.company_burden, r.note || ""].map(esc).join(",");
     }).join("\n");
     const blob = new Blob(["\uFEFF" + header + body], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -75,7 +74,7 @@ export default function MonthlyProcess() {
     URL.revokeObjectURL(url);
   }
 
-  const totalCompany = rows.reduce((s, r) => s + (r.actual_rent - (r.adjusted_personal ?? r.personal_burden)), 0);
+  const totalCompany = rows.reduce((s, r) => s + r.company_burden, 0);
   const totalPersonal = rows.reduce((s, r) => s + (r.adjusted_personal ?? r.personal_burden), 0);
 
   return (

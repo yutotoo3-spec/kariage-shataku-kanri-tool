@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { calcSubsidyLimit, calcBurden } from "../utils/calc";
+import { calcSubsidyLimit, calcBurden, calcActualRent, calcTotalPersonalDeduction, yen } from "../utils/calc";
 import { useSettings } from "../hooks/useSettings";
+import { MONTHLY_COST_FIELDS, monthlyCostsFromRecord, parseMonthlyCosts } from "../utils/monthlyCosts";
 import CalcPreview from "../components/CalcPreview";
 
 function familyLabels(settings) {
@@ -10,6 +11,17 @@ function familyLabels(settings) {
     single: `単身者（限度額 = 基本給÷${Math.round(1 / settings.subsidy_ratio_single)}）`,
     family: `家族帯同者（限度額 = 基本給÷${Math.round(1 / settings.subsidy_ratio_family)}）`,
   };
+}
+
+function PersonalDeductionNote({ costs, salary, familyType, actualRent, settings }) {
+  const subsidyLimit = calcSubsidyLimit(salary, familyType, settings);
+  const { personalBurden } = calcBurden(actualRent, subsidyLimit, settings);
+  const total = calcTotalPersonalDeduction(personalBurden, costs);
+  return (
+    <p style={{ fontSize: 11, color: "#64748B", marginTop: 8 }}>
+      ※ 本人負担の毎月費用を含めた給与控除見込み合計: <strong>{yen(total)}</strong>
+    </p>
+  );
 }
 
 export default function ApplicationDraftDetail() {
@@ -24,7 +36,7 @@ export default function ApplicationDraftDetail() {
 
   useEffect(() => {
     supabase.from("application_drafts").select("*").eq("id", id).single()
-      .then(({ data }) => { if (data) { setDraft(data); setForm(data); } });
+      .then(({ data }) => { if (data) { setDraft(data); setForm({ ...data, ...monthlyCostsFromRecord(data) }); } });
   }, [id]);
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
@@ -32,9 +44,10 @@ export default function ApplicationDraftDetail() {
   async function handleRegister() {
     setProcessing(true);
     const salary = parseInt(form.basic_salary);
-    const rent = parseInt(form.actual_rent);
+    const costs = parseMonthlyCosts(form);
+    const actualRent = calcActualRent(costs);
     const subsidyLimit = calcSubsidyLimit(salary, form.family_type, settings);
-    const { companyBurden, personalBurden } = calcBurden(rent, subsidyLimit, settings);
+    const { companyBurden, personalBurden } = calcBurden(actualRent, subsidyLimit, settings);
 
     const { data: { session } } = await supabase.auth.getSession();
     const reviewerEmail = session?.user?.email || null;
@@ -49,7 +62,8 @@ export default function ApplicationDraftDetail() {
       property_name: form.property_name,
       property_address: form.property_address,
       floor_area: form.floor_area ? parseFloat(form.floor_area) : null,
-      actual_rent: rent,
+      ...costs,
+      actual_rent: actualRent,
       desired_move_in: form.desired_move_in,
       note: form.note || null,
       subsidy_limit: subsidyLimit,
@@ -97,7 +111,8 @@ export default function ApplicationDraftDetail() {
 
   const editable = draft.status === "submitted";
   const salary = parseInt(form.basic_salary) || 0;
-  const rent = parseInt(form.actual_rent) || 0;
+  const costs = parseMonthlyCosts(form);
+  const actualRent = calcActualRent(costs);
 
   return (
     <div style={{ maxWidth: 700 }}>
@@ -152,12 +167,20 @@ export default function ApplicationDraftDetail() {
           <Field label="物件住所" full>
             <input value={form.property_address} onChange={e => set("property_address", e.target.value)} style={inputStyle} disabled={!editable} />
           </Field>
-          <Field label="実賃料（月額・円）">
-            <input type="number" value={form.actual_rent} onChange={e => set("actual_rent", e.target.value)} style={inputStyle} disabled={!editable} />
-          </Field>
           <Field label="入居希望日">
             <input type="date" value={form.desired_move_in} onChange={e => set("desired_move_in", e.target.value)} style={inputStyle} disabled={!editable} />
           </Field>
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 12 }}>毎月の費用</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+            {MONTHLY_COST_FIELDS.map(f => (
+              <Field key={f.key} label={f.label}>
+                <input type="number" value={form[f.key] ?? ""} onChange={e => set(f.key, e.target.value)} style={inputStyle} disabled={!editable} />
+              </Field>
+            ))}
+          </div>
         </div>
 
         {form.note && (
@@ -167,9 +190,10 @@ export default function ApplicationDraftDetail() {
           </div>
         )}
 
-        {salary > 0 && rent > 0 && (
+        {salary > 0 && actualRent > 0 && (
           <div style={{ marginTop: 16 }}>
-            <CalcPreview basicSalary={salary} familyType={form.family_type} actualRent={rent} settings={settings} />
+            <CalcPreview basicSalary={salary} familyType={form.family_type} actualRent={actualRent} settings={settings} />
+            <PersonalDeductionNote costs={costs} salary={salary} familyType={form.family_type} actualRent={actualRent} settings={settings} />
           </div>
         )}
       </Card>

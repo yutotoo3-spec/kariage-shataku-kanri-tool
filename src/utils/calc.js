@@ -39,6 +39,30 @@ export function checkRentCeiling(actualRent, subsidyLimit, settings = DEFAULT_SE
   return actualRent <= subsidyLimit * settings.rent_ceiling_multiplier;
 }
 
+// 実賃料（家賃＋共益費＋管理費）の自動集計
+export function calcActualRent(costs = {}) {
+  return (parseInt(costs.rent) || 0) + (parseInt(costs.common_fee) || 0) + (parseInt(costs.management_fee) || 0);
+}
+
+// 毎月：給与控除合計（実賃料分の本人負担額 ＋ 本人負担の毎月費用）
+const PERSONAL_MONTHLY_COST_KEYS = [
+  "parking_fee", "bicycle_parking_fee", "neighborhood_fee",
+  "internet_fee", "water_fee_flat", "support_service_fee_monthly", "other_monthly_personal",
+];
+export function calcTotalPersonalDeduction(personalBurden, costs = {}) {
+  const extra = PERSONAL_MONTHLY_COST_KEYS.reduce((sum, key) => sum + (parseInt(costs[key]) || 0), 0);
+  return personalBurden + extra;
+}
+
+// 毎月：会社負担合計（実賃料分の会社負担額 ＋ 会社負担の毎月費用）
+const COMPANY_MONTHLY_COST_KEYS = [
+  "other_fixed_lease_cost", "satellite_fee", "other_monthly_company", "guarantee_fee_monthly",
+];
+export function calcTotalCompanyCost(companyBurden, costs = {}) {
+  const extra = COMPANY_MONTHLY_COST_KEYS.reduce((sum, key) => sum + (parseInt(costs[key]) || 0), 0);
+  return companyBurden + extra;
+}
+
 // 日割り計算
 export function calcProration(monthlyAmount, totalDays, occupiedDays) {
   return Math.ceil((monthlyAmount / totalDays) * occupiedDays);

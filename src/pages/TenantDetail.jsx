@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { calcSubsidyLimit, calcBurden, yen } from "../utils/calc";
+import { calcSubsidyLimit, calcBurden, calcTotalPersonalDeduction, yen } from "../utils/calc";
 import { useSettings } from "../hooks/useSettings";
+import { MONTHLY_COST_FIELDS } from "../utils/monthlyCosts";
 
 function familyLabels(settings) {
   return {
@@ -60,6 +61,19 @@ export default function TenantDetail() {
           <Item label="契約開始日" value={tenant.contract_start} />
           <Item label="契約満了日" value={tenant.contract_end || "—"} />
         </Grid>
+        {MONTHLY_COST_FIELDS.some(f => tenant[f.key] > 0) && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 11, color: "#94A3B8", marginBottom: 8 }}>毎月の費用の内訳</div>
+            <Grid>
+              {MONTHLY_COST_FIELDS.filter(f => tenant[f.key] > 0).map(f => (
+                <Item key={f.key} label={f.label.replace(/（.*/, "")} value={yen(tenant[f.key])} />
+              ))}
+              {current && (
+                <Item label="本人負担の毎月費用を含めた控除見込み合計" value={yen(calcTotalPersonalDeduction(current.personal_burden, tenant))} bold />
+              )}
+            </Grid>
+          </div>
+        )}
         {tenant.status === "active" && (
           <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
             <ActionBtn label="基本給を更新（4月）" onClick={() => setShowSalaryModal(true)} />
