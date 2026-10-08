@@ -3,16 +3,15 @@ import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ pending: 0, pendingDrafts: 0, active: 0, moveOutSoon: 0 });
+  const [stats, setStats] = useState({ pending: 0, active: 0, moveOutSoon: 0 });
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const [{ data: apps }, { data: tenants }, { data: drafts }] = await Promise.all([
+      const [{ data: apps }, { data: tenants }] = await Promise.all([
         supabase.from("applications").select("id, status"),
         supabase.from("tenancies").select("id, name, contract_end, status, basic_salary, family_type"),
-        supabase.from("application_drafts").select("id, status").eq("status", "submitted"),
       ]);
 
       const pending = (apps || []).filter(a => ["pending", "reviewing"].includes(a.status)).length;
@@ -66,7 +65,6 @@ export default function Dashboard() {
 
       setStats({
         pending,
-        pendingDrafts: (drafts || []).length,
         active,
         moveOutSoon: (tenants || []).filter(t => t.status === "move_out_pending").length,
       });
@@ -87,7 +85,6 @@ export default function Dashboard() {
 
       {/* サマリーカード */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16, marginBottom: 28 }}>
-        <StatCard label="フォーム未確認" value={stats.pendingDrafts} unit="件" link="/application-drafts" />
         <StatCard label="審査待ち申請" value={stats.pending} unit="件" link="/applications" />
         <StatCard label="入居中" value={stats.active} unit="名" link="/tenants" />
         <StatCard label="退去手続き中" value={stats.moveOutSoon} unit="名" link="/tenants" />
@@ -128,7 +125,7 @@ export default function Dashboard() {
       <div style={{ marginTop: 28 }}>
         <h2 style={{ fontSize: 14, fontWeight: 700, color: "#1E293B", marginBottom: 12 }}>クイックアクション</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
-          <QuickAction to="/application-drafts" label="申請フォーム受付を確認する" desc="本人が送信した内容を確認して申請登録" />
+          <QuickAction to="/applications" label="審査待ちの申請を確認する" desc="本人が送信した申請内容を確認して審査" />
           <QuickAction to="/monthly" label="月次処理を行う" desc="控除額の確認・CSV出力" />
         </div>
       </div>

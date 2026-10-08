@@ -51,7 +51,7 @@ export default function PublicApply() {
     const subsidyLimit = calcSubsidyLimit(salary, form.family_type, settings);
     const { companyBurden, personalBurden } = calcBurden(actualRent, subsidyLimit, settings);
 
-    const { error } = await supabase.from("application_drafts").insert([{
+    const { error } = await supabase.from("applications").insert([{
       scene: form.scene,
       name: form.name,
       email: form.email || null,
@@ -68,6 +68,7 @@ export default function PublicApply() {
       subsidy_limit: subsidyLimit,
       company_burden: companyBurden,
       personal_burden: personalBurden,
+      status: "pending",
     }]);
 
     if (error) { alert("送信に失敗しました: " + error.message); setSubmitting(false); return; }
@@ -85,8 +86,8 @@ export default function PublicApply() {
           <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
           <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1E293B", marginBottom: 10 }}>送信が完了しました</h1>
           <p style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7 }}>
-            人事担当者が内容を確認のうえ、正式に申請登録します。<br />
-            確認までしばらくお待ちください。
+            申請を受け付けました。人事担当者が内容を確認します。<br />
+            審査状況は追ってご連絡します。
           </p>
         </div>
       </PageShell>
@@ -103,7 +104,7 @@ export default function PublicApply() {
           借上社宅 入居申請フォーム
         </div>
         <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 6 }}>
-          入居を希望される物件の情報をご記入ください。送信後、人事担当者が内容を確認して申請登録します。
+          入居を希望される物件の情報をご記入ください。送信後、人事担当者が内容を確認します。
         </p>
       </div>
 
