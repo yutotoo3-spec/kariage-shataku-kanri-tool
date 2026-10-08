@@ -18,6 +18,7 @@ export default function ApplicationList() {
   const [apps, setApps] = useState([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -36,13 +37,28 @@ export default function ApplicationList() {
   const counts = {};
   apps.forEach(a => { counts[a.status] = (counts[a.status] || 0) + 1; });
 
+  async function copyPublicUrl() {
+    const url = `${window.location.origin}/apply`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   if (loading) return <div style={{ color: "#94A3B8", padding: 40 }}>読み込み中...</div>;
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>申請一覧</h1>
-        <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>全{apps.length}件</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>申請一覧</h1>
+          <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>全{apps.length}件</p>
+        </div>
+        <button onClick={copyPublicUrl} style={{
+          padding: "10px 20px", background: "#1E293B", color: "#fff",
+          borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer",
+        }}>
+          {copied ? "コピーしました" : "公開フォームURLをコピー"}
+        </button>
       </div>
 
       {/* フィルタータブ */}

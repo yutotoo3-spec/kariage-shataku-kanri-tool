@@ -11,7 +11,6 @@ const C = {
 const navItems = [
   { to: "/", label: "ダッシュボード" },
   { to: "/applications", label: "申請一覧" },
-  { to: "/application-drafts", label: "申請フォーム受付" },
   { to: "/tenants", label: "入居者台帳" },
   { to: "/monthly", label: "月次処理" },
   { to: "/settings", label: "設定" },
