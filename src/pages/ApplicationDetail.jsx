@@ -99,6 +99,10 @@ export default function ApplicationDetail() {
         <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>{app.name}さんの申請</h1>
       </div>
 
+      {(app.status === "approved" || app.status === "rejected") && (
+        <StatusResultBanner status={app.status} comment={app.review_comment} />
+      )}
+
       {/* 申請内容 */}
       <Card title="申請内容">
         <Grid>
@@ -202,28 +206,34 @@ export default function ApplicationDetail() {
           </button>
         </Card>
       )}
+    </div>
+  );
+}
 
-      {/* 審査済みの場合 */}
-      {app.status === "approved" && (
-        <Card title="審査結果">
-          <div style={{ padding: "10px 14px", background: "#EFF6FF", borderRadius: 8, fontSize: 13, color: "#1D4ED8" }}>
-            ✅ 承認済みです。入居者台帳への登録が完了しています。
+function StatusResultBanner({ status, comment }) {
+  const approved = status === "approved";
+  const color = approved ? "#1D4ED8" : "#DC2626";
+  return (
+    <div style={{
+      display: "flex", gap: 10, alignItems: "flex-start",
+      padding: "14px 18px", marginBottom: 16, borderRadius: 10,
+      background: approved ? "#EFF6FF" : "#FEF2F2",
+      border: `1px solid ${approved ? "#BFDBFE" : "#FECACA"}`,
+    }}>
+      <div style={{ width: 8, height: 8, borderRadius: "50%", marginTop: 5, flexShrink: 0, background: color }} />
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 700, color }}>
+          {approved ? "承認済み" : "差戻し"}
+        </div>
+        <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
+          {approved ? "入居者台帳への登録が完了しています" : "この申請は差戻されました"}
+        </div>
+        {comment && (
+          <div style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
+            {approved ? "コメント" : "理由"}: {comment}
           </div>
-          {app.review_comment && (
-            <div style={{ marginTop: 10, fontSize: 13, color: "#475569" }}>コメント: {app.review_comment}</div>
-          )}
-        </Card>
-      )}
-      {app.status === "rejected" && (
-        <Card title="審査結果">
-          <div style={{ padding: "10px 14px", background: "#FEF2F2", borderRadius: 8, fontSize: 13, color: "#DC2626" }}>
-            ❌ 差戻し
-          </div>
-          {app.review_comment && (
-            <div style={{ marginTop: 10, fontSize: 13, color: "#475569" }}>理由: {app.review_comment}</div>
-          )}
-        </Card>
-      )}
+        )}
+      </div>
     </div>
   );
 }
