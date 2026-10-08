@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { yen } from "../utils/calc";
+import { useCompany } from "../hooks/useCompany";
 
 const STATUS_LABELS = {
   pending: { label: "審査待ち", color: "#F59E0B", bg: "#FFFBEB" },
@@ -15,6 +16,7 @@ const SCENE_LABELS = { new_hire: "採用時", existing: "既存社員" };
 const FAMILY_LABELS = { single: "単身", family: "家族帯同" };
 
 export default function ApplicationList() {
+  const { company } = useCompany();
   const [apps, setApps] = useState([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,8 @@ export default function ApplicationList() {
   apps.forEach(a => { counts[a.status] = (counts[a.status] || 0) + 1; });
 
   async function copyPublicUrl() {
-    const url = `${window.location.origin}/apply`;
+    if (!company?.slug) return;
+    const url = `${window.location.origin}/apply/${company.slug}`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -53,7 +56,7 @@ export default function ApplicationList() {
           <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>申請一覧</h1>
           <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>全{apps.length}件</p>
         </div>
-        <button onClick={copyPublicUrl} style={{
+        <button onClick={copyPublicUrl} disabled={!company?.slug} style={{
           padding: "10px 20px", background: "#1E293B", color: "#fff",
           borderRadius: 8, fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer",
         }}>

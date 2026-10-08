@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { calcSubsidyLimit, calcBurden, calcActualRent, calcTotalPersonalDeduction, yen } from "../utils/calc";
-import { useSettings } from "../hooks/useSettings";
+import { usePublicSettings } from "../hooks/useSettings";
 import { MONTHLY_COST_FIELDS, emptyMonthlyCosts, parseMonthlyCosts } from "../utils/monthlyCosts";
 import CalcPreview from "../components/CalcPreview";
 
@@ -17,11 +18,19 @@ const INITIAL = {
 };
 
 export default function PublicApply() {
-  const { settings } = useSettings();
+  const { companySlug } = useParams();
+  const [company, setCompany] = useState(companySlug ? undefined : null);
+  const { settings } = usePublicSettings(company?.id);
   const [form, setForm] = useState(INITIAL);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!companySlug) return;
+    supabase.from("companies").select("id, name, slug").eq("slug", companySlug).eq("status", "active").maybeSingle()
+      .then(({ data }) => setCompany(data || null));
+  }, [companySlug]);
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
 
@@ -52,6 +61,7 @@ export default function PublicApply() {
     const { companyBurden, personalBurden } = calcBurden(actualRent, subsidyLimit, settings);
 
     const { error } = await supabase.from("applications").insert([{
+      company_id: company.id,
       scene: form.scene,
       name: form.name,
       email: form.email || null,
@@ -79,6 +89,23 @@ export default function PublicApply() {
   const costs = parseMonthlyCosts(form);
   const actualRent = calcActualRent(costs);
 
+  if (company === undefined) {
+    return <PageShell><p style={{ textAlign: "center", color: "#94A3B8", padding: "24px 0" }}>読み込み中...</p></PageShell>;
+  }
+
+  if (company === null) {
+    return (
+      <PageShell>
+        <div style={{ textAlign: "center", padding: "24px 4px" }}>
+          <h1 style={{ fontSize: 16, fontWeight: 700, color: "#1E293B", marginBottom: 10 }}>このフォームは利用できません</h1>
+          <p style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7 }}>
+            URLが正しくないか、フォームが無効になっています。人事担当者に正しい申請フォームURLをご確認ください。
+          </p>
+        </div>
+      </PageShell>
+    );
+  }
+
   if (done) {
     return (
       <PageShell>
@@ -98,7 +125,7 @@ export default function PublicApply() {
     <PageShell>
       <div style={{ textAlign: "center", marginBottom: 28 }}>
         <div style={{ fontSize: 11, color: "#64748B", letterSpacing: "0.08em", marginBottom: 6 }}>
-          ATHENA TECHNOLOGIES
+          {company.name}
         </div>
         <div style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>
           借上社宅 入居申請フォーム

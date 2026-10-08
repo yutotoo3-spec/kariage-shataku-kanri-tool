@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { useCompany } from "../hooks/useCompany";
 
 const C = {
   sidebar: "#1E293B",
@@ -18,6 +19,7 @@ const navItems = [
 
 export default function Layout({ children }) {
   const navigate = useNavigate();
+  const { company } = useCompany();
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -36,7 +38,7 @@ export default function Layout({ children }) {
         <div className="app-sidebar-header" style={{ padding: "20px 16px 16px", borderBottom: "1px solid #334155" }}>
           <div>
             <div style={{ fontSize: 11, color: C.sidebarText, letterSpacing: "0.08em", marginBottom: 4 }}>
-              ATHENA TECHNOLOGIES
+              {company?.name || " "}
             </div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>
               借上社宅管理

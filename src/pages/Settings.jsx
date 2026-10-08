@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { useCompany } from "../hooks/useCompany";
 
 const SETTINGS_META = [
   { key: "company_burden_rate", label: "会社負担率", type: "percent", desc: "第11条2項(1) 実賃料が限度額以内のときの会社負担割合" },
@@ -16,6 +17,7 @@ const SETTINGS_META = [
 ];
 
 export default function Settings() {
+  const { company } = useCompany();
   const [values, setValues] = useState({});
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState(null);
@@ -44,11 +46,13 @@ export default function Settings() {
 
     const { error } = await supabase.from("settings")
       .update({ value, updated_at: new Date().toISOString(), updated_by: updaterEmail })
+      .eq("company_id", company.id)
       .eq("key", meta.key);
 
     if (error) { alert("保存に失敗しました: " + error.message); setSavingKey(null); return; }
 
     await supabase.from("audit_logs").insert([{
+      company_id: company.id,
       user_email: updaterEmail,
       action: "update_setting",
       target_type: "settings",

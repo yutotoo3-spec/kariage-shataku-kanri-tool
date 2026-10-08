@@ -161,6 +161,7 @@ function RentModal({ tenant, settings, onClose, onSave }) {
     const subsidyLimit = calcSubsidyLimit(tenant.basic_salary, tenant.family_type, settings);
     const { companyBurden, personalBurden } = calcBurden(parseInt(newRent), subsidyLimit, settings);
     await supabase.from("rent_history").insert([{
+      company_id: tenant.company_id,
       tenancy_id: tenant.id,
       effective_date: effectiveDate,
       actual_rent: parseInt(newRent),
@@ -170,6 +171,7 @@ function RentModal({ tenant, settings, onClose, onSave }) {
       note: note || null,
     }]);
     await supabase.from("audit_logs").insert([{
+      company_id: tenant.company_id,
       action: "update_rent", target_type: "tenancy", target_id: tenant.id,
       details: { new_rent: newRent, effective_date: effectiveDate },
     }]);
@@ -201,6 +203,7 @@ function FamilyModal({ tenant, settings, onClose, onSave }) {
     setSaving(true);
     await supabase.from("tenancies").update({ family_type: familyType }).eq("id", tenant.id);
     await supabase.from("audit_logs").insert([{
+      company_id: tenant.company_id,
       action: "update_family_type", target_type: "tenancy", target_id: tenant.id,
       details: { old: tenant.family_type, new: familyType },
     }]);
@@ -238,6 +241,7 @@ function SalaryModal({ tenant, rentHistory, settings, onClose, onSave }) {
     if (current) {
       const april = `${new Date().getFullYear()}-04-01`;
       await supabase.from("rent_history").insert([{
+        company_id: tenant.company_id,
         tenancy_id: tenant.id,
         effective_date: april,
         actual_rent: current.actual_rent,
@@ -248,6 +252,7 @@ function SalaryModal({ tenant, rentHistory, settings, onClose, onSave }) {
       }]);
     }
     await supabase.from("audit_logs").insert([{
+      company_id: tenant.company_id,
       action: "update_salary_april", target_type: "tenancy", target_id: tenant.id,
       details: { old: tenant.basic_salary, new: newSalary },
     }]);
@@ -300,6 +305,7 @@ function MoveOutModal({ tenant, onClose, onSave }) {
       restoration_cost: parseInt(restorationCost) || 0,
     }).eq("id", tenant.id);
     await supabase.from("audit_logs").insert([{
+      company_id: tenant.company_id,
       action: "move_out_request", target_type: "tenancy", target_id: tenant.id,
       details: { move_out_date: moveOutDate },
     }]);
