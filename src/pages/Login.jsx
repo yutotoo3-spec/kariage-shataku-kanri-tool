@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 export default function Login() {
@@ -34,9 +34,6 @@ export default function Login() {
         boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
       }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 11, color: "#64748B", letterSpacing: "0.08em", marginBottom: 6 }}>
-            ATHENA TECHNOLOGIES
-          </div>
           <div style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>
             借上社宅管理システム
           </div>
@@ -73,6 +70,10 @@ export default function Login() {
             {loading ? "ログイン中..." : "ログイン"}
           </button>
         </form>
+
+        <p style={{ textAlign: "center", fontSize: 12, color: "#94A3B8", marginTop: 20 }}>
+          初めてご利用の企業様は <Link to="/signup" style={{ color: "#3B82F6", fontWeight: 600 }}>新規登録</Link>
+        </p>
       </div>
     </div>
   );
