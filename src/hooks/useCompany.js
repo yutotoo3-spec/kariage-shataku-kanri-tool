@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 
 export function useCompany() {
   const [company, setCompany] = useState(null);
+  const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,10 +16,11 @@ export function useCompany() {
         .eq("user_id", user.id)
         .single();
       setCompany(data?.companies || null);
+      setRole(data?.role || null);
       setLoading(false);
     }
     load();
   }, []);
 
-  return { company, loading };
+  return { company, role, loading };
 }

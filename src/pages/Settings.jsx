@@ -17,7 +17,7 @@ const SETTINGS_META = [
 ];
 
 export default function Settings() {
-  const { company } = useCompany();
+  const { company, role } = useCompany();
   const [values, setValues] = useState({});
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState(null);
@@ -99,6 +99,133 @@ export default function Settings() {
           </div>
         ))}
       </div>
+
+      {role === "owner" && <TeamSection />}
+    </div>
+  );
+}
+
+const ROLE_LABELS = { owner: "管理者", member: "メンバー" };
+const INVITE_STATUS_LABELS = {
+  pending: { label: "招待中", color: "#D97706", bg: "#FFFBEB" },
+  accepted: { label: "参加済み", color: "#1D4ED8", bg: "#EFF6FF" },
+  revoked: { label: "取り消し済み", color: "#64748B", bg: "#F1F5F9" },
+};
+
+function TeamSection() {
+  const [invites, setInvites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("member");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const [copiedId, setCopiedId] = useState(null);
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    const { data } = await supabase.from("invites").select("*").order("created_at", { ascending: false });
+    setInvites(data || []);
+    setLoading(false);
+  }
+
+  async function handleInvite(e) {
+    e.preventDefault();
+    if (!email) return;
+    setSending(true);
+    setError("");
+    const { error: rpcError } = await supabase.rpc("create_invite", { p_email: email, p_role: role });
+    if (rpcError) { setError("招待の送信に失敗しました: " + rpcError.message); setSending(false); return; }
+    setEmail("");
+    await load();
+    setSending(false);
+  }
+
+  async function handleRevoke(id) {
+    await supabase.rpc("revoke_invite", { p_invite_id: id });
+    await load();
+  }
+
+  async function handleCopy(invite) {
+    const url = `${window.location.origin}/invite/${invite.token}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedId(invite.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  return (
+    <div style={{ marginTop: 28 }}>
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1E293B" }}>チームメンバー</h2>
+        <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>
+          他の担当者を招待すると、同じ企業のデータを一緒に管理できます
+        </p>
+      </div>
+
+      <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", padding: "20px 24px", marginBottom: 16 }}>
+        <form onSubmit={handleInvite} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: "1 1 240px" }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 6 }}>メールアドレス</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+              style={{ width: "100%", padding: "9px 12px", border: "1px solid #E2E8F0", borderRadius: 8, fontSize: 13, color: "#1E293B", outline: "none" }}
+              placeholder="colleague@example.com" />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 6 }}>権限</label>
+            <select value={role} onChange={e => setRole(e.target.value)}
+              style={{ padding: "9px 12px", border: "1px solid #E2E8F0", borderRadius: 8, fontSize: 13, color: "#1E293B", outline: "none" }}>
+              <option value="member">メンバー</option>
+              <option value="owner">管理者</option>
+            </select>
+          </div>
+          <button type="submit" disabled={sending} style={{
+            padding: "9px 20px", background: sending ? "#93C5FD" : "#3B82F6", color: "#fff",
+            border: "none", borderRadius: 8, fontWeight: 600, fontSize: 13,
+          }}>
+            {sending ? "送信中..." : "招待する"}
+          </button>
+        </form>
+        {error && <p style={{ fontSize: 12, color: "#DC2626", marginTop: 10 }}>{error}</p>}
+      </div>
+
+      {!loading && invites.length > 0 && (
+        <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", overflow: "hidden" }}>
+          {invites.map((inv, i) => {
+            const st = INVITE_STATUS_LABELS[inv.status];
+            return (
+              <div key={inv.id} style={{
+                padding: "14px 20px",
+                borderBottom: i < invites.length - 1 ? "1px solid #F1F5F9" : "none",
+                display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+              }}>
+                <div style={{ flex: "1 1 200px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1E293B" }}>{inv.email}</div>
+                  <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>{ROLE_LABELS[inv.role]}</div>
+                </div>
+                <span style={{ padding: "3px 10px", borderRadius: 12, fontSize: 11, fontWeight: 600, background: st.bg, color: st.color }}>
+                  {st.label}
+                </span>
+                {inv.status === "pending" && (
+                  <>
+                    <button onClick={() => handleCopy(inv)} style={{
+                      padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: "#fff", color: "#475569", border: "1px solid #E2E8F0",
+                    }}>
+                      {copiedId === inv.id ? "コピーしました" : "招待URLをコピー"}
+                    </button>
+                    <button onClick={() => handleRevoke(inv.id)} style={{
+                      padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: "#fff", color: "#DC2626", border: "1px solid #FECACA",
+                    }}>
+                      取り消す
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

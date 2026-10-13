@@ -4,6 +4,7 @@ import { supabase } from "./lib/supabase";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import InvitePage from "./pages/InvitePage";
 import Dashboard from "./pages/Dashboard";
 import ApplicationList from "./pages/ApplicationList";
 import ApplicationDetail from "./pages/ApplicationDetail";
@@ -29,6 +30,9 @@ export default function App() {
       // 保留中の企業作成（companies/profiles/settings）をまとめて行う。既に所属企業がある場合は何もしない
       if (event === "SIGNED_IN") {
         supabase.rpc("create_company_and_owner").catch(() => {});
+        // 招待経由のサインアップ（メール確認必須な設定での初回ログイン含む）の保留中の承認を行う。
+        // 招待が無い通常ログインでは "invite metadata missing" で無視されるだけ
+        supabase.rpc("accept_invite").catch(() => {});
       }
     });
     return () => subscription.unsubscribe();
@@ -49,6 +53,7 @@ export default function App() {
         <Route path="/apply" element={<PublicApply />} />
         <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/signup" element={session ? <Navigate to="/" replace /> : <Signup />} />
+        <Route path="/invite/:token" element={session ? <Navigate to="/" replace /> : <InvitePage />} />
         <Route path="/" element={<ProtectedRoute session={session}><Dashboard /></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute session={session}><ApplicationList /></ProtectedRoute>} />
         <Route path="/applications/:id" element={<ProtectedRoute session={session}><ApplicationDetail /></ProtectedRoute>} />
