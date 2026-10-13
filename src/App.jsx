@@ -37,6 +37,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/apply/:companySlug" element={<PublicApply />} />
         <Route path="/apply" element={<PublicApply />} />
         <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/" element={<ProtectedRoute session={session}><Dashboard /></ProtectedRoute>} />

@@ -40,6 +40,7 @@ export default function ApplicationDetail() {
     if (!error) {
       setApp(a => ({ ...a, status: newStatus, review_comment: comment }));
       await supabase.from("audit_logs").insert([{
+        company_id: app.company_id,
         action: "update_application_status", target_type: "application", target_id: id,
         details: { old: app.status, new: newStatus, comment: comment || null },
       }]);
@@ -52,6 +53,7 @@ export default function ApplicationDetail() {
     setConverting(true);
 
     const { data: tenancy, error: tErr } = await supabase.from("tenancies").insert([{
+      company_id: app.company_id,
       application_id: app.id,
       name: app.name,
       email: app.email,
@@ -70,6 +72,7 @@ export default function ApplicationDetail() {
 
     // 最初の家賃履歴を登録
     await supabase.from("rent_history").insert([{
+      company_id: app.company_id,
       tenancy_id: tenancy.id,
       effective_date: contractStart,
       actual_rent: app.actual_rent,
@@ -80,6 +83,7 @@ export default function ApplicationDetail() {
 
     await supabase.from("applications").update({ status: "approved" }).eq("id", id);
     await supabase.from("audit_logs").insert([{
+      company_id: app.company_id,
       action: "convert_to_tenancy", target_type: "application", target_id: id,
       details: { name: app.name, contract_start: contractStart },
     }]);
