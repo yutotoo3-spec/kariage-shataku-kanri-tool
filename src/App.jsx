@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import ApplicationList from "./pages/ApplicationList";
 import ApplicationDetail from "./pages/ApplicationDetail";
@@ -22,7 +23,14 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s);
+      // サインアップ直後（メール確認不要な設定）または確認メール経由の初回ログイン時に、
+      // 保留中の企業作成（companies/profiles/settings）をまとめて行う。既に所属企業がある場合は何もしない
+      if (event === "SIGNED_IN") {
+        supabase.rpc("create_company_and_owner").catch(() => {});
+      }
+    });
     return () => subscription.unsubscribe();
   }, []);
 
@@ -40,6 +48,7 @@ export default function App() {
         <Route path="/apply/:companySlug" element={<PublicApply />} />
         <Route path="/apply" element={<PublicApply />} />
         <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
+        <Route path="/signup" element={session ? <Navigate to="/" replace /> : <Signup />} />
         <Route path="/" element={<ProtectedRoute session={session}><Dashboard /></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute session={session}><ApplicationList /></ProtectedRoute>} />
         <Route path="/applications/:id" element={<ProtectedRoute session={session}><ApplicationDetail /></ProtectedRoute>} />
