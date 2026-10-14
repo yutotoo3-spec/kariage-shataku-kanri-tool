@@ -42,8 +42,8 @@ export default function Signup() {
 
     setLoading(true);
 
-    const { data: existing } = await supabase.from("companies").select("id").eq("slug", slug).maybeSingle();
-    if (existing) {
+    const { data: slugTaken } = await supabase.rpc("is_company_slug_taken", { p_slug: slug });
+    if (slugTaken) {
       setError("このURLは既に使用されています。別のURLを指定してください");
       setLoading(false);
       return;
