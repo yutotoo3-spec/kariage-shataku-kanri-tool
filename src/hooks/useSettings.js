@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { DEFAULT_SETTINGS } from "../utils/calc";
+import { useCompany } from "./useCompany";
 
 function mergeRows(rows) {
   const merged = { ...DEFAULT_SETTINGS };
@@ -8,17 +9,20 @@ function mergeRows(rows) {
   return merged;
 }
 
-// ログイン済みページ用。RLSが自動的に自社（company_id）の行のみを返す。
+// ログイン済みページ用。settingsのSELECT用RLSは公開フォームからも読めるよう企業を問わず許可しているため、
+// ここで明示的に自社のcompany_idに絞り込む（絞り込まないと他社の設定と混ざって返ってくる）。
 export function useSettings() {
+  const { company } = useCompany();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("settings").select("key, value").then(({ data }) => {
+    if (!company?.id) return;
+    supabase.from("settings").select("key, value").eq("company_id", company.id).then(({ data }) => {
       setSettings(mergeRows(data));
       setLoading(false);
     });
-  }, []);
+  }, [company?.id]);
 
   return { settings, loading };
 }
