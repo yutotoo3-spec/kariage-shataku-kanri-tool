@@ -24,15 +24,16 @@ export default function Settings() {
   const [savedKey, setSavedKey] = useState(null);
 
   useEffect(() => {
+    if (!company?.id) return;
     async function load() {
-      const { data } = await supabase.from("settings").select("key, value");
+      const { data } = await supabase.from("settings").select("key, value").eq("company_id", company.id);
       const map = {};
       (data || []).forEach(row => { map[row.key] = row.value; });
       setValues(map);
       setLoading(false);
     }
     load();
-  }, []);
+  }, [company?.id]);
 
   function setDraft(key, val) {
     setValues(v => ({ ...v, [key]: val }));
