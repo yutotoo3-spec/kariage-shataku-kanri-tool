@@ -54,7 +54,6 @@ export default function Settings() {
 
     await supabase.from("audit_logs").insert([{
       company_id: company.id,
-      user_email: updaterEmail,
       action: "update_setting",
       target_type: "settings",
       target_id: null,

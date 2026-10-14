@@ -9,8 +9,7 @@ function mergeRows(rows) {
   return merged;
 }
 
-// ログイン済みページ用。settingsのSELECT用RLSは公開フォームからも読めるよう企業を問わず許可しているため、
-// ここで明示的に自社のcompany_idに絞り込む（絞り込まないと他社の設定と混ざって返ってくる）。
+// ログイン済みページ用。RLSで自社分のみに制限されているが、念のため明示的に自社のcompany_idで絞り込む。
 export function useSettings() {
   const { company } = useCompany();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -27,15 +26,15 @@ export function useSettings() {
   return { settings, loading };
 }
 
-// 未ログインの公開フォーム用。companyId が解決されるまでは問い合わせない
-// （company_id を省略すると全企業分の設定が返ってしまうため、必ず企業を明示して絞り込む）。
+// 未ログインの公開フォーム用。settingsテーブルは未ログインでは読めないため、1社分だけ返すRPC経由で取得する。
+// companyId が解決されるまでは問い合わせない。
 export function usePublicSettings(companyId) {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!companyId) return;
-    supabase.from("settings").select("key, value").eq("company_id", companyId).then(({ data }) => {
+    supabase.rpc("get_public_settings", { p_company_id: companyId }).then(({ data }) => {
       setSettings(mergeRows(data));
       setLoading(false);
     });
