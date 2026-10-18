@@ -5,6 +5,16 @@ import { calcSubsidyLimit, calcBurden, calcActualRent, calcTotalPersonalDeductio
 import { usePublicSettings } from "../hooks/useSettings";
 import { MONTHLY_COST_FIELDS, emptyMonthlyCosts, parseMonthlyCosts } from "../utils/monthlyCosts";
 import CalcPreview from "../components/CalcPreview";
+import TurnstileWidget from "../components/TurnstileWidget";
+
+// Edge Function（submit-application）が返すエラーコードごとの案内
+const SUBMIT_ERROR_MESSAGES = {
+  captcha_required: "ロボットでないことの確認が完了していません。確認欄のチェックが終わってから送信してください。",
+  captcha_failed: "ロボットでないことの確認に失敗しました。もう一度お試しください。",
+  rate_limited: "現在、申請が集中しているため受け付けできません。時間をおいて再度お試しいただくか、人事担当者にお問い合わせください。",
+  invalid_input: "入力内容に誤りがあります。文字数や金額を確認してください。",
+  company_not_found: "このフォームは現在利用できません。人事担当者にお問い合わせください。",
+};
 
 const INITIAL = {
   scene: "new_hire",
@@ -27,6 +37,10 @@ export default function PublicApply() {
   const [done, setDone] = useState(false);
   // ボット対策の罠（ハニーポット）。人間には見えない入力欄で、自動入力のボットだけが値を入れる
   const [honeypot, setHoneypot] = useState("");
+  // Turnstile（CAPTCHA）のトークン。判定が済むまで送信できない。トークンは1回限りのため、送信に失敗したら作り直す
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const [captchaLoadError, setCaptchaLoadError] = useState(false);
 
   useEffect(() => {
     if (!companySlug) return;
@@ -58,28 +72,38 @@ export default function PublicApply() {
     // 罠の欄が埋まっていたらボットとみなし、送信せずに完了画面を出す（ボットに失敗を悟らせないため）
     if (honeypot) { setDone(true); return; }
 
+    if (!captchaToken) { alert(SUBMIT_ERROR_MESSAGES.captcha_required); return; }
+
     setSubmitting(true);
+    // Edge Function が Turnstile のトークンを検証してから登録する（DBへの直接登録は 019 で禁止）。
     // 実賃料・限度額・負担額・ステータスはDBトリガーがサーバー側で設定する（ブラウザから送った値は改ざんできるため）
-    const { error } = await supabase.from("applications").insert([{
-      company_id: company.id,
-      scene: form.scene,
-      name: form.name,
-      email: form.email || null,
-      basic_salary: parseInt(form.basic_salary),
-      family_type: form.family_type,
-      join_date: form.join_date || null,
-      property_name: form.property_name,
-      property_address: form.property_address,
-      floor_area: form.floor_area ? parseFloat(form.floor_area) : null,
-      ...parseMonthlyCosts(form),
-      desired_move_in: form.desired_move_in,
-      note: form.note || null,
-    }]);
+    const { error } = await supabase.functions.invoke("submit-application", {
+      body: {
+        turnstileToken: captchaToken,
+        application: {
+          company_id: company.id,
+          scene: form.scene,
+          name: form.name,
+          email: form.email || null,
+          basic_salary: parseInt(form.basic_salary),
+          family_type: form.family_type,
+          join_date: form.join_date || null,
+          property_name: form.property_name,
+          property_address: form.property_address,
+          floor_area: form.floor_area ? parseFloat(form.floor_area) : null,
+          ...parseMonthlyCosts(form),
+          desired_move_in: form.desired_move_in,
+          note: form.note || null,
+        },
+      },
+    });
 
     if (error) {
-      alert(error.message.includes("too many applications")
-        ? "現在、申請が集中しているため受け付けできません。時間をおいて再度お試しいただくか、人事担当者にお問い合わせください。"
-        : "送信に失敗しました: " + error.message);
+      let code = null;
+      try { code = (await error.context?.json())?.error; } catch { /* 応答がJSONでない場合（通信エラー等） */ }
+      alert(SUBMIT_ERROR_MESSAGES[code] || "送信に失敗しました。時間をおいて再度お試しください。");
+      setCaptchaToken(null);
+      setCaptchaResetKey(k => k + 1);
       setSubmitting(false);
       return;
     }
@@ -248,9 +272,16 @@ export default function PublicApply() {
             placeholder="申請理由・特記事項など" />
         </Section>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-          <button type="submit" disabled={submitting} style={{
-            padding: "12px 32px", background: submitting ? "#93C5FD" : "#3B82F6",
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 16, flexWrap: "wrap", marginTop: 8 }}>
+          {captchaLoadError ? (
+            <p style={{ fontSize: 12, color: "#DC2626" }}>
+              ロボットでないことの確認欄を読み込めませんでした。ページを再読み込みしてください。
+            </p>
+          ) : (
+            <TurnstileWidget onToken={setCaptchaToken} onLoadError={() => setCaptchaLoadError(true)} resetKey={captchaResetKey} />
+          )}
+          <button type="submit" disabled={submitting || !captchaToken} style={{
+            padding: "12px 32px", background: submitting || !captchaToken ? "#93C5FD" : "#3B82F6",
             color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14,
           }}>
             {submitting ? "送信中..." : "送信する"}
