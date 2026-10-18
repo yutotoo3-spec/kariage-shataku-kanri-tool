@@ -15,6 +15,7 @@ const SETTINGS_META = [
   { key: "floor_area_unit_price", label: "賃貸料相当額：床面積単価（円）", type: "number", desc: "第4条3項(2) 12円 ×（総床面積㎡ ÷ 3.3）（現在未使用・下の項目が「する」の場合のみ使用）" },
   { key: "prorate_first_month", label: "初月を日割りする", type: "boolean", desc: "規程に定めのない運用ルール（現在未使用）" },
   { key: "deemed_rent_check_enabled", label: "賃貸料相当額の下限チェックを使う", type: "boolean", desc: "第11条1項ただし書き。有効にすると物件ごとに課税標準額の入力が必要（現在未使用）" },
+  { key: "privacy_contact", label: "申請フォームの問い合わせ窓口", type: "text", desc: "申請フォームの「個人情報の取扱いについて」に表示します（例：人事部 hr@example.com）。誰でも見られる欄なので公開してよい内容だけ入力してください" },
 ];
 
 export default function Settings() {
@@ -262,6 +263,13 @@ function SettingInput({ meta, value, onChange, disabled }) {
         <option value="false">しない</option>
         <option value="true">する</option>
       </select>
+    );
+  }
+
+  if (meta.type === "text") {
+    return (
+      <input type="text" value={value ?? ""} maxLength={500} placeholder="未設定（社内の人事担当部署）"
+        onChange={e => onChange(e.target.value)} disabled={disabled} style={{ ...inputStyle, width: 260 }} />
     );
   }
 

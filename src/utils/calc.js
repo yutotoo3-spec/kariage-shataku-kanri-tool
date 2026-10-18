@@ -11,6 +11,8 @@ export const DEFAULT_SETTINGS = {
   floor_area_unit_price: 12,
   prorate_first_month: false,
   deemed_rent_check_enabled: false,
+  // 金額計算には使わない。申請フォームの個人情報の取扱いに表示する問い合わせ窓口
+  privacy_contact: "",
 };
 
 // 金額×率の掛け算。JavaScriptの小数は2進数の近似のため、11000 * 0.7 が 7699.999… になり

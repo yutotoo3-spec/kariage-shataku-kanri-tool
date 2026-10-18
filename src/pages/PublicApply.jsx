@@ -6,6 +6,7 @@ import { usePublicSettings } from "../hooks/useSettings";
 import { MONTHLY_COST_FIELDS, emptyMonthlyCosts, parseMonthlyCosts } from "../utils/monthlyCosts";
 import CalcPreview from "../components/CalcPreview";
 import TurnstileWidget from "../components/TurnstileWidget";
+import PrivacyNotice from "../components/PrivacyNotice";
 
 // Edge Function（submit-application）が返すエラーコードごとの案内
 const SUBMIT_ERROR_MESSAGES = {
@@ -37,6 +38,7 @@ export default function PublicApply() {
   const [done, setDone] = useState(false);
   // ボット対策の罠（ハニーポット）。人間には見えない入力欄で、自動入力のボットだけが値を入れる
   const [honeypot, setHoneypot] = useState("");
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
   // Turnstile（CAPTCHA）のトークン。判定が済むまで送信できない。トークンは1回限りのため、送信に失敗したら作り直す
   const [captchaToken, setCaptchaToken] = useState(null);
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
@@ -72,6 +74,7 @@ export default function PublicApply() {
     // 罠の欄が埋まっていたらボットとみなし、送信せずに完了画面を出す（ボットに失敗を悟らせないため）
     if (honeypot) { setDone(true); return; }
 
+    if (!privacyAgreed) { alert("個人情報の取扱いに同意してください"); return; }
     if (!captchaToken) { alert(SUBMIT_ERROR_MESSAGES.captcha_required); return; }
 
     setSubmitting(true);
@@ -272,6 +275,8 @@ export default function PublicApply() {
             placeholder="申請理由・特記事項など" />
         </Section>
 
+        <PrivacyNotice companyName={company.name} contact={settings.privacy_contact} agreed={privacyAgreed} onChange={setPrivacyAgreed} />
+
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 16, flexWrap: "wrap", marginTop: 8 }}>
           {captchaLoadError ? (
             <p style={{ fontSize: 12, color: "#DC2626" }}>
@@ -280,8 +285,8 @@ export default function PublicApply() {
           ) : (
             <TurnstileWidget onToken={setCaptchaToken} onLoadError={() => setCaptchaLoadError(true)} resetKey={captchaResetKey} />
           )}
-          <button type="submit" disabled={submitting || !captchaToken} style={{
-            padding: "12px 32px", background: submitting || !captchaToken ? "#93C5FD" : "#3B82F6",
+          <button type="submit" disabled={submitting || !captchaToken || !privacyAgreed} style={{
+            padding: "12px 32px", background: submitting || !captchaToken || !privacyAgreed ? "#93C5FD" : "#3B82F6",
             color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 14,
           }}>
             {submitting ? "送信中..." : "送信する"}
