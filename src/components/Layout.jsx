@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useCompany } from "../hooks/useCompany";
+import { usePlatformAdmin } from "../hooks/usePlatformAdmin";
 
 const C = {
   sidebar: "#1E293B",
@@ -20,6 +21,8 @@ const navItems = [
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const { company } = useCompany();
+  const { isPlatformAdmin } = usePlatformAdmin();
+  const items = isPlatformAdmin ? [...navItems, { to: "/admin", label: "運営者メニュー" }] : navItems;
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -54,7 +57,7 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="app-nav" style={{ flex: 1, padding: "8px 0" }}>
-          {navItems.map(({ to, label }) => (
+          {items.map(({ to, label }) => (
             <NavLink key={to} to={to} end={to === "/"} className="app-nav-link" style={({ isActive }) => ({
               display: "block",
               padding: "10px 16px",
