@@ -25,6 +25,8 @@ export default function PublicApply() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [done, setDone] = useState(false);
+  // ボット対策の罠（ハニーポット）。人間には見えない入力欄で、自動入力のボットだけが値を入れる
+  const [honeypot, setHoneypot] = useState("");
 
   useEffect(() => {
     if (!companySlug) return;
@@ -53,6 +55,9 @@ export default function PublicApply() {
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
+    // 罠の欄が埋まっていたらボットとみなし、送信せずに完了画面を出す（ボットに失敗を悟らせないため）
+    if (honeypot) { setDone(true); return; }
+
     setSubmitting(true);
     // 実賃料・限度額・負担額・ステータスはDBトリガーがサーバー側で設定する（ブラウザから送った値は改ざんできるため）
     const { error } = await supabase.from("applications").insert([{
@@ -71,7 +76,13 @@ export default function PublicApply() {
       note: form.note || null,
     }]);
 
-    if (error) { alert("送信に失敗しました: " + error.message); setSubmitting(false); return; }
+    if (error) {
+      alert(error.message.includes("too many applications")
+        ? "現在、申請が集中しているため受け付けできません。時間をおいて再度お試しいただくか、人事担当者にお問い合わせください。"
+        : "送信に失敗しました: " + error.message);
+      setSubmitting(false);
+      return;
+    }
     setDone(true);
   }
 
@@ -126,6 +137,13 @@ export default function PublicApply() {
       </div>
 
       <form onSubmit={handleSubmit}>
+        <div aria-hidden="true" style={{ position: "absolute", left: "-10000px", width: 1, height: 1, overflow: "hidden" }}>
+          <label>
+            このフィールドは入力しないでください
+            <input type="text" name="website" tabIndex={-1} autoComplete="off"
+              value={honeypot} onChange={e => setHoneypot(e.target.value)} />
+          </label>
+        </div>
         <Section title="申請シーン">
           <div style={{ display: "flex", gap: 12 }}>
             {[["new_hire", "採用時（新入社員）"], ["existing", "既存社員"]].map(([v, l]) => (
