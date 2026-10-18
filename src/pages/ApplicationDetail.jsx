@@ -9,6 +9,9 @@ const STATUS_LABELS = {
   pending: "審査待ち", reviewing: "審査中",
   approved: "承認済", rejected: "差戻し", contract_pending: "契約手続き中",
 };
+// 審査で選べるステータス。「承認済」は入居者台帳への登録と同時にのみ設定する
+// （直接選べると台帳登録が抜けたまま承認済になってしまうため）
+const SELECTABLE_STATUSES = ["pending", "reviewing", "contract_pending", "rejected"];
 const FAMILY_LABELS = { single: "単身者", family: "家族帯同者" };
 const SCENE_LABELS = { new_hire: "採用時（新入社員）", existing: "既存社員" };
 
@@ -23,10 +26,14 @@ export default function ApplicationDetail() {
   const [converting, setConverting] = useState(false);
   const [contractStart, setContractStart] = useState("");
   const [contractEnd, setContractEnd] = useState("");
+  // この申請から作成された入居者が台帳にいるか（undefined = 確認中）
+  const [hasTenancy, setHasTenancy] = useState(undefined);
 
   useEffect(() => {
     supabase.from("applications").select("*").eq("id", id).single()
       .then(({ data }) => { if (data) { setApp(data); setNewStatus(data.status); } });
+    supabase.from("tenancies").select("id").eq("application_id", id).limit(1)
+      .then(({ data }) => setHasTenancy((data || []).length > 0));
   }, [id]);
 
   async function handleUpdateStatus() {
@@ -70,8 +77,8 @@ export default function ApplicationDetail() {
 
     if (tErr) { alert("入居者登録に失敗しました: " + tErr.message); setConverting(false); return; }
 
-    // 最初の家賃履歴を登録
-    await supabase.from("rent_history").insert([{
+    // 最初の家賃履歴を登録（失敗すると台帳・月次処理の金額が0円になるため、エラーは必ず知らせる）
+    const { error: rhErr } = await supabase.from("rent_history").insert([{
       company_id: app.company_id,
       tenancy_id: tenancy.id,
       effective_date: contractStart,
@@ -80,8 +87,12 @@ export default function ApplicationDetail() {
       company_burden: app.company_burden,
       personal_burden: app.personal_burden,
     }]);
+    if (rhErr) {
+      alert("入居者は登録しましたが、家賃履歴の登録に失敗しました。入居者詳細から家賃を登録してください: " + rhErr.message);
+    }
 
-    await supabase.from("applications").update({ status: "approved" }).eq("id", id);
+    const { error: aErr } = await supabase.from("applications").update({ status: "approved" }).eq("id", id);
+    if (aErr) alert("申請のステータス更新に失敗しました: " + aErr.message);
     await supabase.from("audit_logs").insert([{
       company_id: app.company_id,
       action: "convert_to_tenancy", target_type: "application", target_id: id,
@@ -104,7 +115,7 @@ export default function ApplicationDetail() {
       </div>
 
       {(app.status === "approved" || app.status === "rejected") && (
-        <StatusResultBanner status={app.status} comment={app.review_comment} />
+        <StatusResultBanner status={app.status} comment={app.review_comment} hasTenancy={hasTenancy} />
       )}
 
       {/* 申請内容 */}
@@ -172,8 +183,8 @@ export default function ApplicationDetail() {
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>ステータスを変更</label>
             <select value={newStatus} onChange={e => setNewStatus(e.target.value)} style={inputStyle}>
-              {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
+              {SELECTABLE_STATUSES.map(v => (
+                <option key={v} value={v}>{STATUS_LABELS[v]}</option>
               ))}
             </select>
           </div>
@@ -186,11 +197,14 @@ export default function ApplicationDetail() {
           <button onClick={handleUpdateStatus} disabled={saving} style={btnPrimary}>
             {saving ? "更新中..." : "ステータスを更新"}
           </button>
+          <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 10 }}>
+            承認する場合は「契約手続き中」にしてください。契約締結後に入居者台帳へ登録すると「承認済」になります
+          </p>
         </Card>
       )}
 
       {/* 入居者台帳への転記 */}
-      {app.status === "contract_pending" && (
+      {(app.status === "contract_pending" || (app.status === "approved" && hasTenancy === false)) && (
         <Card title="入居者台帳へ登録">
           <p style={{ fontSize: 13, color: "#64748B", marginBottom: 16 }}>
             契約締結後、以下を入力して入居者台帳に登録してください。
@@ -214,7 +228,7 @@ export default function ApplicationDetail() {
   );
 }
 
-function StatusResultBanner({ status, comment }) {
+function StatusResultBanner({ status, comment, hasTenancy }) {
   const approved = status === "approved";
   const color = approved ? "#1D4ED8" : "#DC2626";
   return (
@@ -230,7 +244,9 @@ function StatusResultBanner({ status, comment }) {
           {approved ? "承認済み" : "差戻し"}
         </div>
         <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
-          {approved ? "入居者台帳への登録が完了しています" : "この申請は差戻されました"}
+          {!approved ? "この申請は差戻されました"
+            : hasTenancy === false ? "入居者台帳に未登録です。下のフォームから登録してください"
+            : hasTenancy ? "入居者台帳への登録が完了しています" : ""}
         </div>
         {comment && (
           <div style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
