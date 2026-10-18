@@ -16,6 +16,7 @@ const TenantDetail = lazy(() => import("./pages/TenantDetail"));
 const MonthlyProcess = lazy(() => import("./pages/MonthlyProcess"));
 const Settings = lazy(() => import("./pages/Settings"));
 const PlatformAdmin = lazy(() => import("./pages/PlatformAdmin"));
+const AuditLogs = lazy(() => import("./pages/AuditLogs"));
 
 function FullPageLoading() {
   return (
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="/tenants/:id" element={<ProtectedRoute session={session}><TenantDetail /></ProtectedRoute>} />
         <Route path="/monthly" element={<ProtectedRoute session={session}><MonthlyProcess /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute session={session}><Settings /></ProtectedRoute>} />
+        <Route path="/audit-logs" element={<ProtectedRoute session={session}><AuditLogs /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute session={session}><PlatformAdmin /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

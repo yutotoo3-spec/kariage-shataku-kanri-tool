@@ -76,7 +76,7 @@ select test.expect_error($$select revoke_invite('20000000-0000-0000-0000-0000000
   'only owners', 'member: 招待を取り消せない');
 
 insert into audit_logs (company_id, action, user_email) values ('10000000-0000-0000-0000-0000000000aa', 'test', 'fake@example.com');
-select test.assert_eq((select user_email from audit_logs where action = 'test'), 'member@a.example', 'member: 監査ログの操作者は偽装できない');
+select test.assert_eq((select count(*) from audit_logs), 0::bigint, 'member: 監査ログは閲覧できない（owner のみ）');
 select test.expect_error($$update audit_logs set action = 'x'$$, 'permission denied', 'member: 監査ログを更新できない');
 select test.expect_error($$delete from audit_logs$$, 'permission denied', 'member: 監査ログを削除できない');
 select test.expect_error($$insert into audit_logs (company_id, action) values ('10000000-0000-0000-0000-0000000000bb', 'x')$$,
@@ -86,12 +86,15 @@ reset role;
 select test.assert_eq((select value::text from settings where company_id = '10000000-0000-0000-0000-0000000000aa' and key = 'company_burden_rate'),
   '0.7', 'member の設定変更は反映されない');
 select test.assert_eq((select status from invites where id = '20000000-0000-0000-0000-000000000001'), 'pending', 'member の招待取り消しは反映されない');
+select test.assert_eq((select user_email from audit_logs where action = 'test'), 'member@a.example', 'member: 監査ログの操作者は偽装できない');
 
 -- ===== A社 owner =====
 set role authenticated;
 select test.login('00000000-0000-0000-0000-0000000000a1');
 update settings set value = '0.75' where key = 'company_burden_rate';
 select revoke_invite('20000000-0000-0000-0000-000000000001');
+select test.assert((select count(*) from audit_logs) > 0, 'owner: 自社の監査ログを閲覧できる');
+select test.assert_eq((select count(*) from audit_logs where company_id <> current_company_id()), 0::bigint, 'owner: 他社の監査ログは見えない');
 reset role;
 select test.assert_eq((select value::text from settings where company_id = '10000000-0000-0000-0000-0000000000aa' and key = 'company_burden_rate'),
   '0.75', 'owner は設定を変更できる');
