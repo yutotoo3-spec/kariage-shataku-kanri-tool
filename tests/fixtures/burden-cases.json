@@ -1,0 +1,222 @@
+[
+  {
+    "description": "単身・限度額以内",
+    "settings": {},
+    "basic_salary": 300000,
+    "family_type": "single",
+    "rent": 50000,
+    "common_fee": 5000,
+    "management_fee": 0,
+    "expected": {
+      "actual_rent": 55000,
+      "subsidy_limit": 60000,
+      "company_burden": 38500,
+      "personal_burden": 16500
+    }
+  },
+  {
+    "description": "単身・限度額超過",
+    "settings": {},
+    "basic_salary": 500000,
+    "family_type": "single",
+    "rent": 130000,
+    "common_fee": 0,
+    "management_fee": 10000,
+    "expected": {
+      "actual_rent": 140000,
+      "subsidy_limit": 100000,
+      "company_burden": 70000,
+      "personal_burden": 70000
+    }
+  },
+  {
+    "description": "家族帯同・限度額以内",
+    "settings": {},
+    "basic_salary": 300000,
+    "family_type": "family",
+    "rent": 50000,
+    "common_fee": 0,
+    "management_fee": 0,
+    "expected": {
+      "actual_rent": 50000,
+      "subsidy_limit": 75000,
+      "company_burden": 35000,
+      "personal_burden": 15000
+    }
+  },
+  {
+    "description": "家族帯同・限度額超過",
+    "settings": {},
+    "basic_salary": 400000,
+    "family_type": "family",
+    "rent": 120000,
+    "common_fee": 8000,
+    "management_fee": 2000,
+    "expected": {
+      "actual_rent": 130000,
+      "subsidy_limit": 100000,
+      "company_burden": 70000,
+      "personal_burden": 60000
+    }
+  },
+  {
+    "description": "実賃料が限度額ちょうど",
+    "settings": {},
+    "basic_salary": 300000,
+    "family_type": "single",
+    "rent": 60000,
+    "common_fee": 0,
+    "management_fee": 0,
+    "expected": {
+      "actual_rent": 60000,
+      "subsidy_limit": 60000,
+      "company_burden": 42000,
+      "personal_burden": 18000
+    }
+  },
+  {
+    "description": "実賃料が限度額+1円",
+    "settings": {},
+    "basic_salary": 300000,
+    "family_type": "single",
+    "rent": 60001,
+    "common_fee": 0,
+    "management_fee": 0,
+    "expected": {
+      "actual_rent": 60001,
+      "subsidy_limit": 60000,
+      "company_burden": 42000,
+      "personal_burden": 18001
+    }
+  },
+  {
+    "description": "小数誤差が出やすい金額（11,000円×70%）",
+    "settings": {},
+    "basic_salary": 500000,
+    "family_type": "single",
+    "rent": 11000,
+    "common_fee": 0,
+    "management_fee": 0,
+    "expected": {
+      "actual_rent": 11000,
+      "subsidy_limit": 100000,
+      "company_burden": 7700,
+      "personal_burden": 3300
+    }
+  },
+  {
+    "description": "小数誤差が出やすい金額（41,000円×70%）",
+    "settings": {},
+    "basic_salary": 500000,
+    "family_type": "single",
+    "rent": 41000,
+    "common_fee": 0,
+    "management_fee": 0,
+    "expected": {
+      "actual_rent": 41000,
+      "subsidy_limit": 100000,
+      "company_burden": 28700,
+      "personal_burden": 12300
+    }
+  },
+  {
+    "description": "小数誤差が出やすい金額（限度額側）",
+    "settings": {},
+    "basic_salary": 205000,
+    "family_type": "single",
+    "rent": 90000,
+    "common_fee": 0,
+    "management_fee": 0,
+    "expected": {
+      "actual_rent": 90000,
+      "subsidy_limit": 41000,
+      "company_burden": 28700,
+      "personal_burden": 61300
+    }
+  },
+  {
+    "description": "端数が出る基本給",
+    "settings": {},
+    "basic_salary": 333333,
+    "family_type": "family",
+    "rent": 90000,
+    "common_fee": 1234,
+    "management_fee": 567,
+    "expected": {
+      "actual_rent": 91801,
+      "subsidy_limit": 83333,
+      "company_burden": 58333,
+      "personal_burden": 33468
+    }
+  },
+  {
+    "description": "家賃0円",
+    "settings": {},
+    "basic_salary": 300000,
+    "family_type": "single",
+    "rent": 0,
+    "common_fee": 0,
+    "management_fee": 0,
+    "expected": {
+      "actual_rent": 0,
+      "subsidy_limit": 60000,
+      "company_burden": 0,
+      "personal_burden": 0
+    }
+  },
+  {
+    "description": "高額",
+    "settings": {},
+    "basic_salary": 2000000,
+    "family_type": "family",
+    "rent": 900000,
+    "common_fee": 30000,
+    "management_fee": 20000,
+    "expected": {
+      "actual_rent": 950000,
+      "subsidy_limit": 500000,
+      "company_burden": 350000,
+      "personal_burden": 600000
+    }
+  },
+  {
+    "description": "会社独自の料率（限度額以内）",
+    "settings": {
+      "company_burden_rate": 0.65,
+      "personal_burden_rate": 0.35,
+      "subsidy_ratio_single": 0.18,
+      "subsidy_ratio_family": 0.22
+    },
+    "basic_salary": 400000,
+    "family_type": "single",
+    "rent": 60000,
+    "common_fee": 0,
+    "management_fee": 0,
+    "expected": {
+      "actual_rent": 60000,
+      "subsidy_limit": 72000,
+      "company_burden": 39000,
+      "personal_burden": 21000
+    }
+  },
+  {
+    "description": "会社独自の料率（限度額超過）",
+    "settings": {
+      "company_burden_rate": 0.65,
+      "personal_burden_rate": 0.35,
+      "subsidy_ratio_single": 0.18,
+      "subsidy_ratio_family": 0.22
+    },
+    "basic_salary": 400000,
+    "family_type": "family",
+    "rent": 100000,
+    "common_fee": 3000,
+    "management_fee": 0,
+    "expected": {
+      "actual_rent": 103000,
+      "subsidy_limit": 88000,
+      "company_burden": 57200,
+      "personal_burden": 45800
+    }
+  }
+]
