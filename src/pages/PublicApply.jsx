@@ -28,7 +28,7 @@ export default function PublicApply() {
 
   useEffect(() => {
     if (!companySlug) return;
-    supabase.from("companies").select("id, name, slug").eq("slug", companySlug).eq("status", "active").maybeSingle()
+    supabase.rpc("get_public_company", { p_slug: companySlug }).maybeSingle()
       .then(({ data }) => setCompany(data || null));
   }, [companySlug]);
 
@@ -54,31 +54,21 @@ export default function PublicApply() {
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     setSubmitting(true);
-    const salary = parseInt(form.basic_salary);
-    const costs = parseMonthlyCosts(form);
-    const actualRent = calcActualRent(costs);
-    const subsidyLimit = calcSubsidyLimit(salary, form.family_type, settings);
-    const { companyBurden, personalBurden } = calcBurden(actualRent, subsidyLimit, settings);
-
+    // 実賃料・限度額・負担額・ステータスはDBトリガーがサーバー側で設定する（ブラウザから送った値は改ざんできるため）
     const { error } = await supabase.from("applications").insert([{
       company_id: company.id,
       scene: form.scene,
       name: form.name,
       email: form.email || null,
-      basic_salary: salary,
+      basic_salary: parseInt(form.basic_salary),
       family_type: form.family_type,
       join_date: form.join_date || null,
       property_name: form.property_name,
       property_address: form.property_address,
       floor_area: form.floor_area ? parseFloat(form.floor_area) : null,
-      ...costs,
-      actual_rent: actualRent,
+      ...parseMonthlyCosts(form),
       desired_move_in: form.desired_move_in,
       note: form.note || null,
-      subsidy_limit: subsidyLimit,
-      company_burden: companyBurden,
-      personal_burden: personalBurden,
-      status: "pending",
     }]);
 
     if (error) { alert("送信に失敗しました: " + error.message); setSubmitting(false); return; }
@@ -162,11 +152,11 @@ export default function PublicApply() {
         <Section title="ご本人情報">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             <Field label="氏名" required error={errors.name}>
-              <input value={form.name} onChange={e => set("name", e.target.value)}
+              <input value={form.name} onChange={e => set("name", e.target.value)} maxLength={100}
                 style={inputStyle(errors.name)} placeholder="山田 太郎" />
             </Field>
             <Field label="連絡用メールアドレス" error={errors.email}>
-              <input type="email" value={form.email} onChange={e => set("email", e.target.value)}
+              <input type="email" value={form.email} onChange={e => set("email", e.target.value)} maxLength={254}
                 style={inputStyle()} placeholder="taro@example.com" />
             </Field>
             <Field label="基本給月額（円）" required error={errors.basic_salary}>
@@ -191,7 +181,7 @@ export default function PublicApply() {
         <Section title="物件情報">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             <Field label="物件名" required error={errors.property_name}>
-              <input value={form.property_name} onChange={e => set("property_name", e.target.value)}
+              <input value={form.property_name} onChange={e => set("property_name", e.target.value)} maxLength={200}
                 style={inputStyle(errors.property_name)} placeholder="○○マンション 101号室" />
             </Field>
             <Field label="床面積（㎡）" error={errors.floor_area}>
@@ -202,7 +192,7 @@ export default function PublicApply() {
               )}
             </Field>
             <Field label="物件住所" required error={errors.property_address} style={{ gridColumn: "1 / -1" }}>
-              <input value={form.property_address} onChange={e => set("property_address", e.target.value)}
+              <input value={form.property_address} onChange={e => set("property_address", e.target.value)} maxLength={300}
                 style={inputStyle(errors.property_address)} placeholder="東京都渋谷区○○1-2-3" />
             </Field>
             <Field label="入居希望日" required error={errors.desired_move_in}>
@@ -235,7 +225,7 @@ export default function PublicApply() {
         </Section>
 
         <Section title="備考">
-          <textarea value={form.note} onChange={e => set("note", e.target.value)}
+          <textarea value={form.note} onChange={e => set("note", e.target.value)} maxLength={2000}
             style={{ ...inputStyle(), height: 80, resize: "vertical" }}
             placeholder="申請理由・特記事項など" />
         </Section>
