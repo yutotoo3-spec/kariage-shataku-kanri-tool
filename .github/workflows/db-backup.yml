@@ -1,0 +1,51 @@
+# Supabase のデータベースを毎日バックアップする (#30)
+# 書き出したデータはパスワードで暗号化し、GitHub Actions の成果物（Artifacts）として30日間保管する。
+# 事前に、リポジトリの Settings → Secrets and variables → Actions に次の2つを登録すること:
+#   SUPABASE_DB_URL   … Supabase の Connect → Session pooler の接続文字列（パスワード入り）
+#   BACKUP_PASSPHRASE … 暗号化パスワード（復元時に必要。GitHub以外の安全な場所にも控えておく）
+# 復元手順は docs/backup-restore.md を参照。
+name: DB backup
+
+on:
+  schedule:
+    # 毎日 03:17（日本時間）= 18:17（UTC）
+    - cron: "17 18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Supabase のサーバー（PostgreSQL 15/17）を書き出せるよう、PostgreSQL 公式リポジトリから 17 のクライアントを入れる
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-client-17
+
+      - name: Dump and encrypt
+        id: backup
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          PG_BIN: /usr/lib/postgresql/17/bin
+        run: scripts/backup-db.sh backup-out
+
+      - name: Upload encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: ${{ steps.backup.outputs.file }}
+          retention-days: 30
+          if-no-files-found: error
