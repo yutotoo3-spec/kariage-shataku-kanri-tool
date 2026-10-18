@@ -9,6 +9,7 @@ const Signup = lazy(() => import("./pages/Signup"));
 const InvitePage = lazy(() => import("./pages/InvitePage"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const MfaVerify = lazy(() => import("./pages/MfaVerify"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ApplicationList = lazy(() => import("./pages/ApplicationList"));
 const ApplicationDetail = lazy(() => import("./pages/ApplicationDetail"));
@@ -28,8 +29,10 @@ function FullPageLoading() {
   );
 }
 
-function ProtectedRoute({ children, session }) {
+function ProtectedRoute({ children, session, mfaRequired }) {
   if (!session) return <Navigate to="/login" replace />;
+  // 二要素認証を設定済みで、まだコードを入力していない場合はコード入力画面を出す（DB側でも 022 で拒否される）
+  if (mfaRequired) return <MfaVerify />;
   return <Layout>{children}</Layout>;
 }
 
@@ -52,7 +55,22 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // ログイン情報が変わるたびに、二要素認証のコード入力が必要か（認証レベルを aal2 に上げる必要があるか）を確認する
+  const [mfaCheck, setMfaCheck] = useState(null); // { userId, required }
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data }) => {
+      if (cancelled) return;
+      setMfaCheck({ userId: session.user.id, required: data?.nextLevel === "aal2" && data?.currentLevel !== "aal2" });
+    });
+    return () => { cancelled = true; };
+  }, [session]);
+
   if (session === undefined) return <FullPageLoading />;
+  // 初回（またはユーザーが変わったとき）だけ確認が終わるまで待つ。トークンの定期更新では画面を作り直さない
+  if (session && mfaCheck?.userId !== session.user.id) return <FullPageLoading />;
+  const mfaRequired = Boolean(session && mfaCheck?.required);
 
   return (
     <BrowserRouter>
@@ -63,17 +81,17 @@ export default function App() {
         <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/signup" element={session ? <Navigate to="/" replace /> : <Signup />} />
         <Route path="/forgot-password" element={session ? <Navigate to="/" replace /> : <ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword session={session} />} />
+        <Route path="/reset-password" element={mfaRequired ? <MfaVerify /> : <ResetPassword session={session} />} />
         <Route path="/invite/:token" element={session ? <Navigate to="/" replace /> : <InvitePage />} />
-        <Route path="/" element={<ProtectedRoute session={session}><Dashboard /></ProtectedRoute>} />
-        <Route path="/applications" element={<ProtectedRoute session={session}><ApplicationList /></ProtectedRoute>} />
-        <Route path="/applications/:id" element={<ProtectedRoute session={session}><ApplicationDetail /></ProtectedRoute>} />
-        <Route path="/tenants" element={<ProtectedRoute session={session}><TenantLedger /></ProtectedRoute>} />
-        <Route path="/tenants/:id" element={<ProtectedRoute session={session}><TenantDetail /></ProtectedRoute>} />
-        <Route path="/monthly" element={<ProtectedRoute session={session}><MonthlyProcess /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute session={session}><Settings /></ProtectedRoute>} />
-        <Route path="/audit-logs" element={<ProtectedRoute session={session}><AuditLogs /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute session={session}><PlatformAdmin /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute session={session} mfaRequired={mfaRequired}><Dashboard /></ProtectedRoute>} />
+        <Route path="/applications" element={<ProtectedRoute session={session} mfaRequired={mfaRequired}><ApplicationList /></ProtectedRoute>} />
+        <Route path="/applications/:id" element={<ProtectedRoute session={session} mfaRequired={mfaRequired}><ApplicationDetail /></ProtectedRoute>} />
+        <Route path="/tenants" element={<ProtectedRoute session={session} mfaRequired={mfaRequired}><TenantLedger /></ProtectedRoute>} />
+        <Route path="/tenants/:id" element={<ProtectedRoute session={session} mfaRequired={mfaRequired}><TenantDetail /></ProtectedRoute>} />
+        <Route path="/monthly" element={<ProtectedRoute session={session} mfaRequired={mfaRequired}><MonthlyProcess /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute session={session} mfaRequired={mfaRequired}><Settings /></ProtectedRoute>} />
+        <Route path="/audit-logs" element={<ProtectedRoute session={session} mfaRequired={mfaRequired}><AuditLogs /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute session={session} mfaRequired={mfaRequired}><PlatformAdmin /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </Suspense>
