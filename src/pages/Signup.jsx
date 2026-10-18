@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -11,16 +11,25 @@ function suggestSlug(name) {
     .replace(/^-+|-+$/g, "");
 }
 
+// 企業登録は招待制。運営者が発行した /signup?invite=<token> のリンクからのみ登録できる
 export default function Signup() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get("invite");
+  const [invite, setInvite] = useState(inviteToken ? undefined : null);
   const [companyName, setCompanyName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+
+  useEffect(() => {
+    if (!inviteToken) return;
+    supabase.rpc("get_company_invite_by_token", { p_token: inviteToken }).maybeSingle()
+      .then(({ data }) => setInvite(data?.valid ? data : null));
+  }, [inviteToken]);
 
   function handleCompanyNameChange(val) {
     setCompanyName(val);
@@ -50,8 +59,8 @@ export default function Signup() {
     }
 
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { company_name: companyName, company_slug: slug } },
+      email: invite.email, password,
+      options: { data: { company_name: companyName, company_slug: slug, company_invite_token: inviteToken } },
     });
 
     if (signUpError) {
@@ -85,9 +94,30 @@ export default function Signup() {
         <div style={{ textAlign: "center" }}>
           <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1E293B", marginBottom: 10 }}>確認メールを送信しました</h1>
           <p style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7 }}>
-            {email} 宛に確認メールを送信しました。メール内のリンクをクリックしてから、ログインしてください。
+            {invite.email} 宛に確認メールを送信しました。メール内のリンクをクリックしてから、ログインしてください。
           </p>
         </div>
+      </AuthShell>
+    );
+  }
+
+  if (invite === undefined) {
+    return <AuthShell><p style={{ textAlign: "center", color: "#94A3B8" }}>読み込み中...</p></AuthShell>;
+  }
+
+  if (invite === null) {
+    return (
+      <AuthShell>
+        <div style={{ textAlign: "center" }}>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1E293B", marginBottom: 10 }}>企業登録は招待制です</h1>
+          <p style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7 }}>
+            ご利用をご希望の企業様は、運営者から届いた招待リンクから登録してください。
+            招待リンクの期限が切れている、または使用済みの場合は、運営者に再発行をご依頼ください。
+          </p>
+        </div>
+        <p style={{ textAlign: "center", fontSize: 12, color: "#94A3B8", marginTop: 20 }}>
+          既にアカウントをお持ちの方は <Link to="/login" style={{ color: "#3B82F6", fontWeight: 600 }}>ログイン</Link>
+        </p>
       </AuthShell>
     );
   }
@@ -113,8 +143,9 @@ export default function Signup() {
           <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>申請フォームのURLに使われます（半角英数字・ハイフン）</p>
         </Field>
         <Field label="管理者メールアドレス">
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-            style={inputStyle} placeholder="admin@sample-inc.com" required />
+          <input type="email" value={invite.email} readOnly
+            style={{ ...inputStyle, background: "#F8FAFC", color: "#64748B" }} />
+          <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>招待されたメールアドレスで登録します</p>
         </Field>
         <Field label="パスワード">
           <input type="password" value={password} onChange={e => setPassword(e.target.value)}
