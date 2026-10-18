@@ -13,10 +13,17 @@ export const DEFAULT_SETTINGS = {
   deemed_rent_check_enabled: false,
 };
 
+// 金額×率の掛け算。JavaScriptの小数は2進数の近似のため、11000 * 0.7 が 7699.999… になり
+// 切り捨てで1円ずれることがある。小数第6位で丸めて誤差を消してから切り捨て・切り上げに使う
+// （DB側の calc_rent_burden は numeric 型で正確に計算しており、それと結果をそろえるため）
+function multiply(amount, rate) {
+  return Math.round(amount * rate * 1e6) / 1e6;
+}
+
 // 補助対象限度額
 export function calcSubsidyLimit(basicSalary, familyType, settings = DEFAULT_SETTINGS) {
   const ratio = familyType === "single" ? settings.subsidy_ratio_single : settings.subsidy_ratio_family;
-  return Math.floor(basicSalary * ratio);
+  return Math.floor(multiply(basicSalary, ratio));
 }
 
 // 会社負担額・本人負担額
@@ -24,19 +31,19 @@ export function calcBurden(actualRent, subsidyLimit, settings = DEFAULT_SETTINGS
   const { company_burden_rate: companyRate, personal_burden_rate: personalRate } = settings;
   if (actualRent <= subsidyLimit) {
     return {
-      companyBurden: Math.floor(actualRent * companyRate),
-      personalBurden: Math.ceil(actualRent * personalRate),
+      companyBurden: Math.floor(multiply(actualRent, companyRate)),
+      personalBurden: Math.ceil(multiply(actualRent, personalRate)),
     };
   }
   return {
-    companyBurden: Math.floor(subsidyLimit * companyRate),
-    personalBurden: Math.ceil(subsidyLimit * personalRate) + (actualRent - subsidyLimit),
+    companyBurden: Math.floor(multiply(subsidyLimit, companyRate)),
+    personalBurden: Math.ceil(multiply(subsidyLimit, personalRate)) + (actualRent - subsidyLimit),
   };
 }
 
 // 上限チェック（限度額×上限倍率超は承認不可推奨）
 export function checkRentCeiling(actualRent, subsidyLimit, settings = DEFAULT_SETTINGS) {
-  return actualRent <= subsidyLimit * settings.rent_ceiling_multiplier;
+  return actualRent <= multiply(subsidyLimit, settings.rent_ceiling_multiplier);
 }
 
 // 実賃料（家賃＋共益費＋管理費）の自動集計
@@ -65,7 +72,7 @@ export function calcTotalCompanyCost(companyBurden, costs = {}) {
 
 // 日割り計算
 export function calcProration(monthlyAmount, totalDays, occupiedDays) {
-  return Math.ceil((monthlyAmount / totalDays) * occupiedDays);
+  return Math.ceil(Math.round((monthlyAmount * occupiedDays / totalDays) * 1e6) / 1e6);
 }
 
 // 金額フォーマット
