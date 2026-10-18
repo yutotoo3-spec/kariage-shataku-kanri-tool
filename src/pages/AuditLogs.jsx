@@ -42,6 +42,14 @@ const ACTIONS = {
     label: "設定の変更",
     summary: d => `${d.key}：${JSON.stringify(d.new_value)}`,
   },
+  remove_member: {
+    label: "メンバーを会社から外す",
+    summary: d => `${d.email}（${d.role === "owner" ? "管理者" : "メンバー"}）`,
+  },
+  change_member_role: {
+    label: "メンバーの権限変更",
+    summary: d => `${d.email}：${d.old === "owner" ? "管理者" : "メンバー"} → ${d.new === "owner" ? "管理者" : "メンバー"}`,
+  },
   admin_set_company_status: {
     label: "企業の利用状態の変更（運営者）",
     summary: d => COMPANY_STATUS_LABELS[d.status] || d.status,
