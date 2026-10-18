@@ -20,7 +20,7 @@ const navItems = [
 
 export default function Layout({ children }) {
   const navigate = useNavigate();
-  const { company } = useCompany();
+  const { company, suspended } = useCompany();
   const { isPlatformAdmin } = usePlatformAdmin();
   const items = isPlatformAdmin ? [...navItems, { to: "/admin", label: "運営者メニュー" }] : navItems;
 
@@ -86,7 +86,14 @@ export default function Layout({ children }) {
 
       {/* メインコンテンツ */}
       <main className="app-main" style={{ marginLeft: 220, flex: 1, padding: "28px 32px", minHeight: "100vh" }}>
-        {children}
+        {suspended ? (
+          <div style={{ maxWidth: 560, background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", padding: "24px 28px" }}>
+            <h1 style={{ fontSize: 16, fontWeight: 700, color: "#1E293B", marginBottom: 8 }}>この企業アカウントは利用停止中です</h1>
+            <p style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7 }}>
+              現在、データの閲覧・申請フォームの受け付けを停止しています。再開については運営者にお問い合わせください。
+            </p>
+          </div>
+        ) : children}
       </main>
     </div>
   );
