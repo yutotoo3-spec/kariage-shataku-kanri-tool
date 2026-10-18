@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { calcProration, calcTotalPersonalDeduction, calcTotalCompanyCost, yen } from "../utils/calc";
+import { csvRow } from "../utils/csv";
 
 // 指定月の月次処理の行（入居中・退去手続き中の入居者ごとの負担額）を取得する
 async function fetchRows(yearMonth) {
@@ -68,14 +69,10 @@ export default function MonthlyProcess() {
   }
 
   function exportCSV() {
-    const esc = v => {
-      const s = String(v ?? "");
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
     const header = "氏名,物件名,実賃料,本人負担額,会社負担額,備考\n";
     const body = rows.map(r => {
       const personal = r.adjusted_personal ?? r.personal_burden;
-      return [r.name, r.property_name, r.actual_rent, personal, r.company_burden, r.note || ""].map(esc).join(",");
+      return csvRow([r.name, r.property_name, r.actual_rent, personal, r.company_burden, r.note || ""]);
     }).join("\n");
     const blob = new Blob(["\uFEFF" + header + body], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
