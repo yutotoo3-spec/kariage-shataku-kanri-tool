@@ -12,6 +12,14 @@ function familyLabels(settings) {
   };
 }
 
+async function fetchTenant(id) {
+  const [{ data: tenant }, { data: history }] = await Promise.all([
+    supabase.from("tenancies").select("*").eq("id", id).single(),
+    supabase.from("rent_history").select("*").eq("tenancy_id", id).order("effective_date", { ascending: false }),
+  ]);
+  return { tenant, history: history || [] };
+}
+
 export default function TenantDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -23,15 +31,21 @@ export default function TenantDetail() {
   const [showMoveOutModal, setShowMoveOutModal] = useState(false);
   const [showSalaryModal, setShowSalaryModal] = useState(false);
 
-  useEffect(() => { loadData(); }, [id]);
+  useEffect(() => {
+    let cancelled = false;
+    fetchTenant(id).then(({ tenant, history }) => {
+      if (cancelled) return;
+      setTenant(tenant);
+      setRentHistory(history);
+    });
+    return () => { cancelled = true; };
+  }, [id]);
 
+  // 家賃変更などの保存後に読み直す
   async function loadData() {
-    const [{ data: t }, { data: hist }] = await Promise.all([
-      supabase.from("tenancies").select("*").eq("id", id).single(),
-      supabase.from("rent_history").select("*").eq("tenancy_id", id).order("effective_date", { ascending: false }),
-    ]);
-    setTenant(t);
-    setRentHistory(hist || []);
+    const { tenant, history } = await fetchTenant(id);
+    setTenant(tenant);
+    setRentHistory(history);
   }
 
   const current = rentHistory[0];

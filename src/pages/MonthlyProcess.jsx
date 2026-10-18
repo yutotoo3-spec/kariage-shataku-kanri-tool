@@ -2,46 +2,58 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { calcProration, calcTotalPersonalDeduction, calcTotalCompanyCost, yen } from "../utils/calc";
 
+// 指定月の月次処理の行（入居中・退去手続き中の入居者ごとの負担額）を取得する
+async function fetchRows(yearMonth) {
+  const { data: tenants } = await supabase
+    .from("tenancies")
+    .select("*, rent_history(actual_rent, personal_burden, company_burden, subsidy_limit, effective_date)")
+    .in("status", ["active", "move_out_pending"]);
+
+  return (tenants || []).map(t => {
+    const hist = (t.rent_history || []).sort((a, b) => b.effective_date.localeCompare(a.effective_date));
+    const rent = hist[0] || {};
+    const isMovingOut = t.status === "move_out_pending" && t.move_out_date?.startsWith(yearMonth);
+    return {
+      tenancy_id: t.id,
+      name: t.name,
+      property_name: t.property_name,
+      actual_rent: rent.actual_rent || 0,
+      personal_burden: calcTotalPersonalDeduction(rent.personal_burden || 0, t),
+      company_burden: calcTotalCompanyCost(rent.company_burden || 0, t),
+      is_moving_out: isMovingOut,
+      move_out_date: t.move_out_date,
+      proration_days: null,
+      adjusted_personal: null,
+      note: isMovingOut ? "退去月" : "",
+    };
+  });
+}
+
 export default function MonthlyProcess() {
   const today = new Date();
   const [yearMonth, setYearMonth] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`);
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [salaryChecked, setSalaryChecked] = useState(false);
 
   const isApril = yearMonth?.endsWith("-04");
 
-  async function loadRows() {
-    setLoading(true);
-    const { data: tenants } = await supabase
-      .from("tenancies")
-      .select("*, rent_history(actual_rent, personal_burden, company_burden, subsidy_limit, effective_date)")
-      .in("status", ["active", "move_out_pending"]);
-
-    const newRows = (tenants || []).map(t => {
-      const hist = (t.rent_history || []).sort((a, b) => b.effective_date.localeCompare(a.effective_date));
-      const rent = hist[0] || {};
-      const isMovingOut = t.status === "move_out_pending" && t.move_out_date?.startsWith(yearMonth);
-      return {
-        tenancy_id: t.id,
-        name: t.name,
-        property_name: t.property_name,
-        actual_rent: rent.actual_rent || 0,
-        personal_burden: calcTotalPersonalDeduction(rent.personal_burden || 0, t),
-        company_burden: calcTotalCompanyCost(rent.company_burden || 0, t),
-        is_moving_out: isMovingOut,
-        move_out_date: t.move_out_date,
-        proration_days: null,
-        adjusted_personal: null,
-        note: isMovingOut ? "退去月" : "",
-      };
+  useEffect(() => {
+    if (!yearMonth) return;
+    // 月を素早く切り替えたとき、古い月の結果で上書きしないようにする
+    let cancelled = false;
+    fetchRows(yearMonth).then(newRows => {
+      if (cancelled) return;
+      setRows(newRows);
+      setLoading(false);
     });
+    return () => { cancelled = true; };
+  }, [yearMonth]);
 
-    setRows(newRows);
-    setLoading(false);
+  function changeYearMonth(value) {
+    setYearMonth(value);
+    if (value) setLoading(true);
   }
-
-  useEffect(() => { if (yearMonth) loadRows(); }, [yearMonth]);
 
   function updateRow(idx, key, val) {
     setRows(prev => prev.map((r, i) => {
@@ -88,7 +100,7 @@ export default function MonthlyProcess() {
       <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <div>
           <label style={{ fontSize: 12, fontWeight: 600, color: "#475569", marginRight: 10 }}>対象月</label>
-          <input type="month" value={yearMonth} onChange={e => setYearMonth(e.target.value)}
+          <input type="month" value={yearMonth} onChange={e => changeYearMonth(e.target.value)}
             style={{ padding: "8px 12px", border: "1px solid #E2E8F0", borderRadius: 8, fontSize: 14 }} />
         </div>
         <div style={{ fontSize: 13, color: "#64748B" }}>

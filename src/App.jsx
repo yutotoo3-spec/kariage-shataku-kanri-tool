@@ -1,19 +1,29 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import Layout from "./components/Layout";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import InvitePage from "./pages/InvitePage";
-import Dashboard from "./pages/Dashboard";
-import ApplicationList from "./pages/ApplicationList";
-import ApplicationDetail from "./pages/ApplicationDetail";
-import PublicApply from "./pages/PublicApply";
-import TenantLedger from "./pages/TenantLedger";
-import TenantDetail from "./pages/TenantDetail";
-import MonthlyProcess from "./pages/MonthlyProcess";
-import Settings from "./pages/Settings";
-import PlatformAdmin from "./pages/PlatformAdmin";
+
+// ページごとに分割して読み込む（開いたページの分だけをダウンロードし、最初の表示を速くする）
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const InvitePage = lazy(() => import("./pages/InvitePage"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ApplicationList = lazy(() => import("./pages/ApplicationList"));
+const ApplicationDetail = lazy(() => import("./pages/ApplicationDetail"));
+const PublicApply = lazy(() => import("./pages/PublicApply"));
+const TenantLedger = lazy(() => import("./pages/TenantLedger"));
+const TenantDetail = lazy(() => import("./pages/TenantDetail"));
+const MonthlyProcess = lazy(() => import("./pages/MonthlyProcess"));
+const Settings = lazy(() => import("./pages/Settings"));
+const PlatformAdmin = lazy(() => import("./pages/PlatformAdmin"));
+
+function FullPageLoading() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8" }}>
+      読み込み中...
+    </div>
+  );
+}
 
 function ProtectedRoute({ children, session }) {
   if (!session) return <Navigate to="/login" replace />;
@@ -39,16 +49,11 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (session === undefined) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8" }}>
-        読み込み中...
-      </div>
-    );
-  }
+  if (session === undefined) return <FullPageLoading />;
 
   return (
     <BrowserRouter>
+      <Suspense fallback={<FullPageLoading />}>
       <Routes>
         <Route path="/apply/:companySlug" element={<PublicApply />} />
         <Route path="/apply" element={<PublicApply />} />
@@ -65,6 +70,7 @@ export default function App() {
         <Route path="/admin" element={<ProtectedRoute session={session}><PlatformAdmin /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
