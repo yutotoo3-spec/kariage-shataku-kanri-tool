@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { clearActivity } from "../utils/idle";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -8,11 +9,23 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // 操作がなく自動ログアウトした直後なら、その旨を表示する（表示したら消す）
+  const [idleLoggedOut] = useState(() => {
+    try {
+      const flag = sessionStorage.getItem("kariage:idleLogout") === "1";
+      sessionStorage.removeItem("kariage:idleLogout");
+      return flag;
+    } catch {
+      return false;
+    }
+  });
 
   async function handleLogin(e) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    // 前回の操作時刻が残っていると、ログイン直後に自動ログアウトと判定されるため消しておく
+    clearActivity();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setError("メールアドレスまたはパスワードが正しくありません");
@@ -40,6 +53,11 @@ export default function Login() {
           <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>人事担当者専用</div>
         </div>
 
+        {idleLoggedOut && (
+          <div style={{ marginBottom: 16, padding: "10px 14px", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, fontSize: 12, color: "#1D4ED8" }}>
+            一定時間操作がなかったため、自動でログアウトしました。もう一度ログインしてください
+          </div>
+        )}
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: 16 }}>
             <label style={labelStyle}>メールアドレス</label>

@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import Layout from "./components/Layout";
+import IdleLogout from "./components/IdleLogout";
+import { clearActivity } from "./utils/idle";
 
 // ページごとに分割して読み込む（開いたページの分だけをダウンロードし、最初の表示を速くする）
 const Login = lazy(() => import("./pages/Login"));
@@ -43,6 +45,8 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
+      // ログアウトしたら最後の操作時刻を消す（次にログインしたときに、古い時刻ですぐログアウトされないように）
+      if (event === "SIGNED_OUT") clearActivity();
       // サインアップ直後（メール確認不要な設定）または確認メール経由の初回ログイン時に、
       // 保留中の企業作成（companies/profiles/settings）をまとめて行う。既に所属企業がある場合は何もしない
       if (event === "SIGNED_IN") {
@@ -74,6 +78,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      {session && <IdleLogout userId={session.user.id} />}
       <Suspense fallback={<FullPageLoading />}>
       <Routes>
         <Route path="/apply/:companySlug" element={<PublicApply />} />
