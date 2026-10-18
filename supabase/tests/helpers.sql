@@ -40,4 +40,9 @@ create function test.login(p_user_id uuid) returns void language sql as $$
          set_config('request.jwt.claim.role', case when p_user_id is null then 'anon' else 'authenticated' end, false);
 $$;
 
+-- ログイン時の認証レベルを切り替える（aal1 = パスワードのみ、aal2 = 二要素認証のコード入力済み）
+create function test.set_aal(p_aal text) returns void language sql as $$
+  select set_config('request.jwt.claim.aal', p_aal, false);
+$$;
+
 grant execute on all functions in schema test to anon, authenticated;

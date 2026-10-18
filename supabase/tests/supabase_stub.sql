@@ -17,4 +17,9 @@ create function auth.uid() returns uuid language sql stable as
   $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 create function auth.role() returns text language sql stable as
   $$ select nullif(current_setting('request.jwt.claim.role', true), '') $$;
+create function auth.jwt() returns jsonb language sql stable as
+  $$ select jsonb_build_object('aal', coalesce(nullif(current_setting('request.jwt.claim.aal', true), ''), 'aal1')) $$;
 grant execute on all functions in schema auth to anon, authenticated;
+
+-- 二要素認証の登録情報（本物は status が auth.factor_status 型）
+create table auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid not null, status text not null);
