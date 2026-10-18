@@ -18,6 +18,105 @@ function formatDate(value) {
   return value ? new Date(value).toLocaleDateString("ja-JP") : "";
 }
 
+const COMPANY_STATUS_LABELS = {
+  active: { label: "利用中", color: "#15803D", bg: "#F0FDF4" },
+  suspended: { label: "停止中", color: "#DC2626", bg: "#FEF2F2" },
+};
+
+function CompanyList() {
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [updatingId, setUpdatingId] = useState(null);
+
+  function applyResult({ data, error: rpcError }) {
+    if (rpcError) setError("企業一覧の取得に失敗しました: " + rpcError.message);
+    setCompanies(data || []);
+    setLoading(false);
+  }
+
+  async function load() {
+    applyResult(await supabase.rpc("admin_list_companies"));
+  }
+
+  useEffect(() => {
+    supabase.rpc("admin_list_companies").then(applyResult);
+  }, []);
+
+  async function handleToggle(company) {
+    const next = company.status === "active" ? "suspended" : "active";
+    const message = next === "suspended"
+      ? `${company.name} を利用停止しますか？\n\n停止すると、この会社の申請フォームが使えなくなり、社員もデータを閲覧できなくなります（データは削除されません）。`
+      : `${company.name} の利用を再開しますか？`;
+    if (!confirm(message)) return;
+    setUpdatingId(company.id);
+    const { error: rpcError } = await supabase.rpc("admin_set_company_status", { p_company_id: company.id, p_status: next });
+    if (rpcError) {
+      alert(rpcError.message.includes("cannot suspend your own company")
+        ? "自分が所属している会社は停止できません"
+        : "変更に失敗しました: " + rpcError.message);
+    }
+    await load();
+    setUpdatingId(null);
+  }
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: 12 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1E293B" }}>利用企業</h2>
+        <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>
+          登録済みの企業と利用状況です。入居者数は退去済みを除いた人数です
+        </p>
+      </div>
+      {error && <p style={{ fontSize: 12, color: "#DC2626", marginBottom: 10 }}>{error}</p>}
+      {loading ? (
+        <div style={{ color: "#94A3B8", padding: 20 }}>読み込み中...</div>
+      ) : (
+        <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", overflow: "hidden" }}>
+          {companies.map((c, i) => {
+            const st = COMPANY_STATUS_LABELS[c.status] || COMPANY_STATUS_LABELS.active;
+            return (
+              <div key={c.id} style={{
+                padding: "14px 20px",
+                borderBottom: i < companies.length - 1 ? "1px solid #F1F5F9" : "none",
+                display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+              }}>
+                <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1E293B" }}>{c.name}</div>
+                  <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2, overflowWrap: "anywhere" }}>
+                    /apply/{c.slug} ／ 登録 {formatDate(c.created_at)}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2, overflowWrap: "anywhere" }}>
+                    管理者：{c.owner_emails || "なし"}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 14, fontSize: 12, color: "#475569" }}>
+                  <span>ユーザー {c.member_count}</span>
+                  <span>申請 {c.application_count}</span>
+                  <span>入居者 {c.tenancy_count}</span>
+                </div>
+                <div style={{ fontSize: 11, color: "#94A3B8", minWidth: 110 }}>
+                  最終申請 {c.last_application_at ? formatDate(c.last_application_at) : "—"}
+                </div>
+                <span style={{ padding: "3px 10px", borderRadius: 12, fontSize: 11, fontWeight: 600, background: st.bg, color: st.color }}>
+                  {st.label}
+                </span>
+                <button onClick={() => handleToggle(c)} disabled={updatingId === c.id} style={{
+                  padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, background: "#fff",
+                  color: c.status === "active" ? "#DC2626" : "#15803D",
+                  border: `1px solid ${c.status === "active" ? "#FECACA" : "#BBF7D0"}`,
+                }}>
+                  {updatingId === c.id ? "変更中..." : c.status === "active" ? "利用停止" : "再開"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PlatformAdmin() {
   const { isPlatformAdmin, loading: checking } = usePlatformAdmin();
   const [invites, setInvites] = useState([]);
@@ -64,9 +163,15 @@ export default function PlatformAdmin() {
   if (!isPlatformAdmin) return <div style={{ color: "#94A3B8", padding: 40 }}>このページを表示する権限がありません</div>;
 
   return (
-    <div style={{ maxWidth: 760 }}>
+    <div style={{ maxWidth: 900 }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>運営者メニュー：企業登録の招待</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1E293B" }}>運営者メニュー</h1>
+      </div>
+
+      <CompanyList />
+
+      <div style={{ marginBottom: 12 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: "#1E293B" }}>企業登録の招待</h2>
         <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>
           企業登録は招待制です。招待URLを発行して、利用企業の管理者に送ってください（有効期限14日・1回のみ使用可）
         </p>

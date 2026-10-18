@@ -13,6 +13,8 @@ async function fetchProfile(userId) {
 export function useCompany() {
   const [company, setCompany] = useState(null);
   const [role, setRole] = useState(null);
+  // 所属はしているが、会社が運営者によって利用停止されている（020 で停止中の会社は companies を読めなくなる）
+  const [suspended, setSuspended] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,10 +32,11 @@ export function useCompany() {
       }
       setCompany(data?.companies || null);
       setRole(data?.role || null);
+      setSuspended(!!data && !data.companies);
       setLoading(false);
     }
     load();
   }, []);
 
-  return { company, role, loading };
+  return { company, role, loading, suspended };
 }
