@@ -12,6 +12,7 @@
 | 月次処理 | `/monthly` | 月ごとの会社負担額・本人負担額の一覧 |
 | 設定（owner のみ） | `/settings` | 規程の料率など。担当者の招待 |
 | 監査ログ（owner のみ） | `/audit-logs` | 誰が・いつ・何を操作したかの記録を閲覧 |
+| パスワード再設定 | `/forgot-password` → メールのリンク → `/reset-password` | ログイン画面の「パスワードを忘れた場合」から。Supabase の Redirect URLs に `/reset-password` の URL を登録しておく |
 | 運営者メニュー | `/admin` | 企業登録の招待発行、企業の一覧・利用停止（運営者のみ） |
 
 ### 権限

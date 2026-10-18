@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 export default function Login() {
@@ -71,7 +71,11 @@ export default function Login() {
           </button>
         </form>
 
-        <p style={{ textAlign: "center", fontSize: 12, color: "#94A3B8", marginTop: 20 }}>
+        <p style={{ textAlign: "center", fontSize: 12, marginTop: 16 }}>
+          <Link to="/forgot-password" style={{ color: "#3B82F6" }}>パスワードを忘れた場合</Link>
+        </p>
+
+        <p style={{ textAlign: "center", fontSize: 12, color: "#94A3B8", marginTop: 12 }}>
           企業登録は招待制です。運営者から届いた招待リンクから登録してください
         </p>
       </div>
