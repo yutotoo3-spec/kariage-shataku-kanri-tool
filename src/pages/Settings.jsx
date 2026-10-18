@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useCompany } from "../hooks/useCompany";
 import MfaSection from "../components/MfaSection";
+import RetentionSection from "../components/RetentionSection";
 
 const SETTINGS_META = [
   { key: "company_burden_rate", label: "会社負担率", type: "percent", desc: "第11条2項(1) 実賃料が限度額以内のときの会社負担割合" },
@@ -110,6 +111,8 @@ export default function Settings() {
       </div>
 
       {isOwner && <TeamSection />}
+
+      {isOwner && <RetentionSection />}
 
       <MfaSection />
     </div>
