@@ -7,6 +7,8 @@ import Layout from "./components/Layout";
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const InvitePage = lazy(() => import("./pages/InvitePage"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ApplicationList = lazy(() => import("./pages/ApplicationList"));
 const ApplicationDetail = lazy(() => import("./pages/ApplicationDetail"));
@@ -60,6 +62,8 @@ export default function App() {
         <Route path="/apply" element={<PublicApply />} />
         <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/signup" element={session ? <Navigate to="/" replace /> : <Signup />} />
+        <Route path="/forgot-password" element={session ? <Navigate to="/" replace /> : <ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword session={session} />} />
         <Route path="/invite/:token" element={session ? <Navigate to="/" replace /> : <InvitePage />} />
         <Route path="/" element={<ProtectedRoute session={session}><Dashboard /></ProtectedRoute>} />
         <Route path="/applications" element={<ProtectedRoute session={session}><ApplicationList /></ProtectedRoute>} />
