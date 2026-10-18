@@ -17,7 +17,7 @@ const SETTINGS_META = [
 ];
 
 export default function Settings() {
-  const { company, role } = useCompany();
+  const { company, role, loading: companyLoading } = useCompany();
   const isOwner = role === "owner";
   const [values, setValues] = useState({});
   const [loading, setLoading] = useState(true);
@@ -66,6 +66,7 @@ export default function Settings() {
     setTimeout(() => setSavedKey(null), 2000);
   }
 
+  if (!companyLoading && !company) return <NoCompanyNotice />;
   if (loading) return <div style={{ color: "#94A3B8", padding: 40 }}>読み込み中...</div>;
 
   return (
@@ -107,6 +108,19 @@ export default function Settings() {
       </div>
 
       {isOwner && <TeamSection />}
+    </div>
+  );
+}
+
+// 所属企業がないアカウント（企業登録・招待の承認が完了していない等）でログインしている場合の案内
+function NoCompanyNotice() {
+  return (
+    <div style={{ maxWidth: 560, background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", padding: "24px 28px" }}>
+      <h1 style={{ fontSize: 16, fontWeight: 700, color: "#1E293B", marginBottom: 8 }}>所属している企業がありません</h1>
+      <p style={{ fontSize: 13, color: "#64748B", lineHeight: 1.7 }}>
+        このアカウントはどの企業にも所属していないため、設定を表示できません。
+        企業の管理者から届いた招待リンク、または運営者から届いた企業登録の招待リンクから登録を完了してください。
+      </p>
     </div>
   );
 }
