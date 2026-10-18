@@ -1,4 +1,4 @@
-// deno test --allow-env supabase/functions/submit-application/index.test.ts
+// deno test --config supabase/functions/deno.json --allow-env supabase/functions/
 import { assertEquals } from "jsr:@std/assert@1";
 
 Deno.env.set("SUBMIT_APPLICATION_TEST", "1");
