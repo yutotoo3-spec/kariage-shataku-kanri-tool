@@ -30,29 +30,11 @@ select test.assert_eq((select name from get_public_company('a-co')), 'A社', 'an
 select test.assert_eq((select count(*) from get_public_company('stopped-co')), 0::bigint, 'anon: 停止中の会社は取得できない');
 select test.assert((select count(*) from get_public_settings('10000000-0000-0000-0000-0000000000aa')) > 0, 'anon: 1社分の設定を取得できる');
 
-select test.expect_error($$
-  insert into applications (company_id, scene, name, basic_salary, family_type, property_name, property_address, rent, desired_move_in, status)
-  values ('10000000-0000-0000-0000-0000000000aa', 'new_hire', 'x', 300000, 'single', 'p', 'a', 50000, '2026-11-01', 'approved')
-$$, 'permission denied', 'anon: status を指定した申請は拒否');
-select test.expect_error($$
-  insert into applications (company_id, scene, name, basic_salary, family_type, property_name, property_address, rent, desired_move_in, personal_burden)
-  values ('10000000-0000-0000-0000-0000000000aa', 'new_hire', 'x', 300000, 'single', 'p', 'a', 50000, '2026-11-01', 0)
-$$, 'permission denied', 'anon: 負担額を指定した申請は拒否');
+-- 019 以降、申請は Edge Function（service_role）経由のみ。未ログインの直接 INSERT はすべて拒否される
 select test.expect_error($$
   insert into applications (company_id, scene, name, basic_salary, family_type, property_name, property_address, rent, desired_move_in)
-  values ('10000000-0000-0000-0000-0000000000cc', 'new_hire', 'x', 300000, 'single', 'p', 'a', 50000, '2026-11-01')
-$$, 'row-level security', 'anon: 停止中の会社への申請は拒否');
-select test.expect_error($$
-  insert into applications (company_id, scene, name, basic_salary, family_type, property_name, property_address, rent, desired_move_in)
-  values ('10000000-0000-0000-0000-0000000000aa', 'new_hire', repeat('あ', 101), 300000, 'single', 'p', 'a', 50000, '2026-11-01')
-$$, 'applications_text_length_check', 'anon: 101文字の氏名は拒否');
-select test.expect_error($$
-  insert into applications (company_id, scene, name, basic_salary, family_type, property_name, property_address, rent, parking_fee, desired_move_in)
-  values ('10000000-0000-0000-0000-0000000000aa', 'new_hire', 'x', 300000, 'single', 'p', 'a', 50000, -1, '2026-11-01')
-$$, 'applications_amount_range_check', 'anon: 負の金額は拒否');
-
-insert into applications (company_id, scene, name, basic_salary, family_type, property_name, property_address, rent, desired_move_in)
-values ('10000000-0000-0000-0000-0000000000aa', 'new_hire', '申請者1', 300000, 'single', 'p', 'a', 50000, '2026-11-01');
+  values ('10000000-0000-0000-0000-0000000000aa', 'new_hire', 'x', 300000, 'single', 'p', 'a', 50000, '2026-11-01')
+$$, 'permission denied', 'anon: 申請テーブルへの直接の登録は拒否（CAPTCHA を経由しない送信を防ぐ）');
 select test.assert_eq((select count(*) from applications), 0::bigint, 'anon: 申請を読めない');
 select test.expect_error($$select convert_application_to_tenancy(gen_random_uuid(), '2026-11-01')$$,
   'permission denied', 'anon: 台帳登録RPCを呼べない');
@@ -60,7 +42,28 @@ select test.expect_error($$select * from create_company_invite('x@example.com')$
   'only platform admins|permission denied', 'anon: 企業登録の招待を発行できない');
 reset role;
 
-select test.assert_eq((select status from applications where name = '申請者1'), 'pending', '申請は審査待ちで登録される');
+-- ===== Edge Function（service_role）相当の登録：値の検証・再計算はDB側で必ず行われる =====
+select test.expect_error($$
+  insert into applications (company_id, scene, name, basic_salary, family_type, property_name, property_address, rent, desired_move_in)
+  values ('10000000-0000-0000-0000-0000000000aa', 'new_hire', repeat('あ', 101), 300000, 'single', 'p', 'a', 50000, '2026-11-01')
+$$, 'applications_text_length_check', '101文字の氏名は拒否');
+select test.expect_error($$
+  insert into applications (company_id, scene, name, basic_salary, family_type, property_name, property_address, rent, parking_fee, desired_move_in)
+  values ('10000000-0000-0000-0000-0000000000aa', 'new_hire', 'x', 300000, 'single', 'p', 'a', 50000, -1, '2026-11-01')
+$$, 'applications_amount_range_check', '負の金額は拒否');
+insert into applications (company_id, scene, name, basic_salary, family_type, property_name, property_address, rent, desired_move_in, status, personal_burden)
+values ('10000000-0000-0000-0000-0000000000aa', 'new_hire', '申請者1', 300000, 'single', 'p', 'a', 50000, '2026-11-01', 'approved', 0);
+select test.assert_eq((select status from applications where name = '申請者1'), 'pending', 'status を指定しても審査待ちで登録される');
+select test.assert_eq((select personal_burden from applications where name = '申請者1'), 15000, '負担額はサーバー側で再計算される');
+
+-- ログイン中でも、所属していない会社への直接登録は拒否（CAPTCHA を経由しない送信を防ぐ）
+set role authenticated;
+select test.login('00000000-0000-0000-0000-0000000000b1');
+select test.expect_error($$
+  insert into applications (company_id, scene, name, basic_salary, family_type, property_name, property_address, rent, desired_move_in)
+  values ('10000000-0000-0000-0000-0000000000aa', 'new_hire', 'x', 300000, 'single', 'p', 'a', 50000, '2026-11-01')
+$$, 'row-level security', '他社の社員は申請テーブルに直接登録できない');
+reset role;
 
 -- ===== A社 member =====
 set role authenticated;
