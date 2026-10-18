@@ -20,9 +20,13 @@ const navItems = [
 
 export default function Layout({ children }) {
   const navigate = useNavigate();
-  const { company, suspended } = useCompany();
+  const { company, role, suspended } = useCompany();
   const { isPlatformAdmin } = usePlatformAdmin();
-  const items = isPlatformAdmin ? [...navItems, { to: "/admin", label: "運営者メニュー" }] : navItems;
+  const items = [
+    ...navItems,
+    ...(role === "owner" ? [{ to: "/audit-logs", label: "監査ログ" }] : []),
+    ...(isPlatformAdmin ? [{ to: "/admin", label: "運営者メニュー" }] : []),
+  ];
 
   async function handleLogout() {
     await supabase.auth.signOut();

@@ -14,6 +14,7 @@ import TenantDetail from "./pages/TenantDetail";
 import MonthlyProcess from "./pages/MonthlyProcess";
 import Settings from "./pages/Settings";
 import PlatformAdmin from "./pages/PlatformAdmin";
+import AuditLogs from "./pages/AuditLogs";
 
 function ProtectedRoute({ children, session }) {
   if (!session) return <Navigate to="/login" replace />;
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/tenants/:id" element={<ProtectedRoute session={session}><TenantDetail /></ProtectedRoute>} />
         <Route path="/monthly" element={<ProtectedRoute session={session}><MonthlyProcess /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute session={session}><Settings /></ProtectedRoute>} />
+        <Route path="/audit-logs" element={<ProtectedRoute session={session}><AuditLogs /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute session={session}><PlatformAdmin /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
