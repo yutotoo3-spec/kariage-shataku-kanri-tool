@@ -18,6 +18,7 @@ const SETTINGS_META = [
 
 export default function Settings() {
   const { company, role } = useCompany();
+  const isOwner = role === "owner";
   const [values, setValues] = useState({});
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState(null);
@@ -74,6 +75,11 @@ export default function Settings() {
         <p style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>
           借上社宅管理規程に基づく料率・上限値です。変更するとアプリ全体の計算にすぐ反映されます
         </p>
+        {!isOwner && (
+          <p style={{ fontSize: 12, color: "#B45309", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: "8px 12px", marginTop: 12 }}>
+            設定の変更は管理者（owner）のみ可能です。閲覧のみできます
+          </p>
+        )}
       </div>
 
       <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", overflow: "hidden" }}>
@@ -87,20 +93,20 @@ export default function Settings() {
               <div style={{ fontSize: 13, fontWeight: 600, color: "#1E293B" }}>{meta.label}</div>
               <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>{meta.desc}</div>
             </div>
-            <SettingInput meta={meta} value={values[meta.key]} onChange={val => setDraft(meta.key, val)} />
-            <button onClick={() => handleSave(meta)} disabled={savingKey === meta.key} style={{
+            <SettingInput meta={meta} value={values[meta.key]} onChange={val => setDraft(meta.key, val)} disabled={!isOwner} />
+            {isOwner && <button onClick={() => handleSave(meta)} disabled={savingKey === meta.key} style={{
               padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600,
               background: savedKey === meta.key ? "#EFF6FF" : "#fff",
               color: savedKey === meta.key ? "#1D4ED8" : "#475569",
               border: `1px solid ${savedKey === meta.key ? "#BFDBFE" : "#E2E8F0"}`,
             }}>
               {savingKey === meta.key ? "保存中..." : savedKey === meta.key ? "保存しました" : "保存"}
-            </button>
+            </button>}
           </div>
         ))}
       </div>
 
-      {role === "owner" && <TeamSection />}
+      {isOwner && <TeamSection />}
     </div>
   );
 }
@@ -230,12 +236,12 @@ function TeamSection() {
   );
 }
 
-function SettingInput({ meta, value, onChange }) {
+function SettingInput({ meta, value, onChange, disabled }) {
   const inputStyle = { width: 140, padding: "7px 10px", border: "1px solid #E2E8F0", borderRadius: 8, fontSize: 13, color: "#1E293B", outline: "none" };
 
   if (meta.type === "boolean") {
     return (
-      <select value={value ? "true" : "false"} onChange={e => onChange(e.target.value === "true")} style={inputStyle}>
+      <select value={value ? "true" : "false"} onChange={e => onChange(e.target.value === "true")} disabled={disabled} style={inputStyle}>
         <option value="false">しない</option>
         <option value="true">する</option>
       </select>
@@ -248,7 +254,7 @@ function SettingInput({ meta, value, onChange }) {
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <input type="number" value={percentValue} step={0.1}
           onChange={e => onChange(e.target.value === "" ? null : parseFloat(e.target.value) / 100)}
-          style={inputStyle} />
+          disabled={disabled} style={inputStyle} />
         <span style={{ fontSize: 12, color: "#64748B" }}>%</span>
       </div>
     );
@@ -257,6 +263,6 @@ function SettingInput({ meta, value, onChange }) {
   return (
     <input type="number" value={value ?? ""} step="any"
       onChange={e => onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
-      style={inputStyle} />
+      disabled={disabled} style={inputStyle} />
   );
 }
