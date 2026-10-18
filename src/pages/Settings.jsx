@@ -135,6 +135,92 @@ const INVITE_STATUS_LABELS = {
   revoked: { label: "取り消し済み", color: "#64748B", bg: "#F1F5F9" },
 };
 
+// 所属メンバーの一覧。退職・異動した担当者を会社から外したり、権限を変更したりする
+function MemberList() {
+  const [members, setMembers] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const [error, setError] = useState("");
+
+  async function fetchMembers() {
+    const { data, error } = await supabase.rpc("list_company_members");
+    if (error) throw error;
+    return data || [];
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchMembers()
+      .then(list => { if (!cancelled) setMembers(list); })
+      .catch(e => { if (!cancelled) setError("メンバー一覧を取得できませんでした: " + e.message); });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function reload() {
+    try { setMembers(await fetchMembers()); }
+    catch (e) { setError("メンバー一覧を取得できませんでした: " + e.message); }
+  }
+
+  async function handleRoleChange(member, newRole) {
+    setError("");
+    setBusyId(member.user_id);
+    const { error } = await supabase.rpc("set_member_role", { p_user_id: member.user_id, p_role: newRole });
+    if (error) setError("権限を変更できませんでした: " + error.message);
+    await reload();
+    setBusyId(null);
+  }
+
+  async function handleRemove(member) {
+    if (!window.confirm(`${member.email} を会社から外しますか？\n外すと、このユーザーはすぐに自社のデータを見られなくなります。`)) return;
+    setError("");
+    setBusyId(member.user_id);
+    const { error } = await supabase.rpc("remove_company_member", { p_user_id: member.user_id });
+    if (error) setError("メンバーを外せませんでした: " + error.message);
+    await reload();
+    setBusyId(null);
+  }
+
+  if (members === null && !error) return null;
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", overflow: "hidden", marginBottom: 16 }}>
+      <div style={{ padding: "12px 20px", borderBottom: "1px solid #F1F5F9", fontSize: 12, fontWeight: 700, color: "#475569" }}>
+        所属メンバー
+      </div>
+      {(members || []).map((m, i, list) => (
+        <div key={m.user_id} style={{
+          padding: "14px 20px",
+          borderBottom: i < list.length - 1 ? "1px solid #F1F5F9" : "none",
+          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+        }}>
+          <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#1E293B", wordBreak: "break-all" }}>
+              {m.email}{m.is_me && <span style={{ fontSize: 11, color: "#94A3B8", fontWeight: 400 }}>（あなた）</span>}
+            </div>
+          </div>
+          {m.is_me ? (
+            <span style={{ fontSize: 12, color: "#475569" }}>{ROLE_LABELS[m.role]}</span>
+          ) : (
+            <>
+              <select value={m.role} disabled={busyId === m.user_id} onChange={e => handleRoleChange(m, e.target.value)}
+                style={{ padding: "6px 10px", border: "1px solid #E2E8F0", borderRadius: 8, fontSize: 12, color: "#1E293B" }}>
+                <option value="member">メンバー</option>
+                <option value="owner">管理者</option>
+              </select>
+              <button onClick={() => handleRemove(m)} disabled={busyId === m.user_id} style={{
+                padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                background: "#fff", color: "#DC2626", border: "1px solid #FECACA",
+              }}>
+                会社から外す
+              </button>
+            </>
+          )}
+        </div>
+      ))}
+      {error && <p style={{ fontSize: 12, color: "#DC2626", padding: "10px 20px" }}>{error}</p>}
+    </div>
+  );
+}
+
 function TeamSection() {
   const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -184,6 +270,8 @@ function TeamSection() {
           他の担当者を招待すると、同じ企業のデータを一緒に管理できます
         </p>
       </div>
+
+      <MemberList />
 
       <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", padding: "20px 24px", marginBottom: 16 }}>
         <form onSubmit={handleInvite} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
