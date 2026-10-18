@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { yen, calcTotalPersonalDeduction } from "../utils/calc";
 import { useSettings } from "../hooks/useSettings";
-import { MONTHLY_COST_FIELDS, parseMonthlyCosts } from "../utils/monthlyCosts";
+import { MONTHLY_COST_FIELDS } from "../utils/monthlyCosts";
 
 const STATUS_LABELS = {
   pending: "審査待ち", reviewing: "審査中",
@@ -12,6 +12,12 @@ const STATUS_LABELS = {
 // 審査で選べるステータス。「承認済」は入居者台帳への登録と同時にのみ設定する
 // （直接選べると台帳登録が抜けたまま承認済になってしまうため）
 const SELECTABLE_STATUSES = ["pending", "reviewing", "contract_pending", "rejected"];
+const CONVERT_ERROR_MESSAGES = {
+  "tenancy already registered for this application": "この申請は既に入居者台帳に登録されています",
+  "application is not ready for tenancy registration": "ステータスが「契約手続き中」または「承認済」の申請のみ登録できます",
+  "contract end date must be on or after start date": "契約満了日は契約開始日以降の日付を入力してください",
+  "application not found": "申請が見つかりません",
+};
 const FAMILY_LABELS = { single: "単身者", family: "家族帯同者" };
 const SCENE_LABELS = { new_hire: "採用時（新入社員）", existing: "既存社員" };
 
@@ -57,47 +63,21 @@ export default function ApplicationDetail() {
 
   async function handleConvertToTenancy() {
     if (!contractStart) { alert("契約開始日を入力してください"); return; }
+    if (contractEnd && contractEnd < contractStart) { alert("契約満了日は契約開始日以降の日付を入力してください"); return; }
     setConverting(true);
 
-    const { data: tenancy, error: tErr } = await supabase.from("tenancies").insert([{
-      company_id: app.company_id,
-      application_id: app.id,
-      name: app.name,
-      email: app.email,
-      basic_salary: app.basic_salary,
-      family_type: app.family_type,
-      property_name: app.property_name,
-      property_address: app.property_address,
-      floor_area: app.floor_area,
-      contract_start: contractStart,
-      contract_end: contractEnd || null,
-      status: "active",
-      ...parseMonthlyCosts(app),
-    }]).select("id").single();
+    // 入居者登録・家賃履歴・申請の承認・監査ログを、DB側で1つのトランザクションとして実行する（途中で失敗したら全部取り消される）
+    const { error } = await supabase.rpc("convert_application_to_tenancy", {
+      p_application_id: app.id,
+      p_contract_start: contractStart,
+      p_contract_end: contractEnd || null,
+    });
 
-    if (tErr) { alert("入居者登録に失敗しました: " + tErr.message); setConverting(false); return; }
-
-    // 最初の家賃履歴を登録（失敗すると台帳・月次処理の金額が0円になるため、エラーは必ず知らせる）
-    const { error: rhErr } = await supabase.from("rent_history").insert([{
-      company_id: app.company_id,
-      tenancy_id: tenancy.id,
-      effective_date: contractStart,
-      actual_rent: app.actual_rent,
-      subsidy_limit: app.subsidy_limit,
-      company_burden: app.company_burden,
-      personal_burden: app.personal_burden,
-    }]);
-    if (rhErr) {
-      alert("入居者は登録しましたが、家賃履歴の登録に失敗しました。入居者詳細から家賃を登録してください: " + rhErr.message);
+    if (error) {
+      alert("入居者台帳への登録に失敗しました: " + (CONVERT_ERROR_MESSAGES[error.message] || error.message));
+      setConverting(false);
+      return;
     }
-
-    const { error: aErr } = await supabase.from("applications").update({ status: "approved" }).eq("id", id);
-    if (aErr) alert("申請のステータス更新に失敗しました: " + aErr.message);
-    await supabase.from("audit_logs").insert([{
-      company_id: app.company_id,
-      action: "convert_to_tenancy", target_type: "application", target_id: id,
-      details: { name: app.name, contract_start: contractStart },
-    }]);
 
     alert(`${app.name}さんを入居者台帳に登録しました`);
     navigate("/tenants");
