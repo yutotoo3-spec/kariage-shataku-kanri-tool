@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # バックアップ → 復元の一連の流れを、テスト用DBで確認する
 # 「本番役」のDBにマイグレーションとサンプルデータを入れ、scripts/backup-db.sh で暗号化バックアップを作り、
-# scripts/restore-db.sh で「復元先役」のDBに戻して、データ・RLS・権限・トリガーが戻ることを確かめる。
+# scripts/prepare-restore-target.sh で空の「復元先役」のDBを準備し、scripts/restore-db.sh で戻して、データ・RLS・権限・トリガーが戻ることを確かめる。
 # 接続先は psql の標準の環境変数（PGHOST / PGPORT / PGUSER / PGPASSWORD）で指定する。
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -20,8 +20,8 @@ db_url() {
 
 for db in "$prod_db" "$restore_db"; do
   psql -X -q -v ON_ERROR_STOP=1 -d postgres -c "drop database if exists $db" -c "create database $db"
-  psql -X -q -v ON_ERROR_STOP=1 -d "$db" -f supabase/tests/supabase_stub.sql
 done
+psql -X -q -v ON_ERROR_STOP=1 -d "$prod_db" -f supabase/tests/supabase_stub.sql
 for migration in supabase/migrations/*.sql; do
   psql -X -q -v ON_ERROR_STOP=1 -d "$prod_db" -f "$migration" >/dev/null
 done
@@ -40,6 +40,8 @@ out="$(mktemp -d)"
 trap 'rm -rf "$out"' EXIT
 
 scripts/backup-db.sh "$out" >/dev/null
+# 復元先は空のDB。復元テストの workflow と同じく、本番役のDBからロールと auth.users の定義を写して準備する
+scripts/prepare-restore-target.sh >/dev/null
 backup_file="$(ls "$out"/db-backup-*.tar.gz.gpg)"
 
 # 復元先に本番を指定すると中止されること

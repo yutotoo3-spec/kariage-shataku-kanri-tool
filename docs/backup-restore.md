@@ -41,27 +41,25 @@ gpg --decrypt db-backup-YYYYMMDDTHHMMSSZ.tar.gz.gpg | tar -xz
 
 バックアップが「取れている」だけでなく「戻せる」ことを確かめるため、毎月1日に **Actions → DB restore drill** が自動で実行されます（手動実行も可能）。
 
-最新のバックアップを、本番とは別の **復元確認用の Supabase プロジェクト** に戻し、次を確認します（`scripts/restore-db.sh`）。結果は実行画面の **Summary** に表として表示されます（件数のみで、個人情報は表示しません）。
+最新のバックアップを、**その実行の中だけで動く使い捨ての PostgreSQL** に戻し、次を確認します（`scripts/prepare-restore-target.sh` → `scripts/restore-db.sh`）。復元したデータは実行の終了とともに消えるため、本番の個人データが別の場所に残ることはありません。結果は実行画面の **Summary** に表として表示されます（件数のみで、個人情報は表示しません）。
 
 - 主要なテーブルの件数（本番の現在の件数と並べて表示）
 - 全テーブルで RLS（行単位のアクセス制御）が有効か
 - マイグレーションで外した権限が戻っていないか（未ログインでの申請の直接登録・監査ログの更新削除・内部用関数の呼び出し）
 - アプリが使う権限・トリガーが戻っているか
 
-### 初回設定
+使う Secret は DB backup と同じ（`SUPABASE_DB_URL`・`BACKUP_PASSPHRASE`）で、追加の設定は不要です。本番には、件数・ロール名・`auth.users` の定義の読み取りしか行いません。
 
-1. Supabase で **新しいプロジェクト** を作る（例：`kariage-restore-test`。無料プランで可。リージョンは本番と同じ東京を推奨）
-2. 新しいプロジェクトの **Connect → Session pooler** の接続文字列をコピーし、`[YOUR-PASSWORD]` を **そのプロジェクトの** DBパスワードに置き換える
-3. GitHub の **Settings → Secrets and variables → Actions → New repository secret** で登録する
-   - `RESTORE_DB_URL`：2の接続文字列
-4. **Actions → DB backup → Run workflow** でバックアップを取り直す（この変更より前のバックアップは権限を含まないため、復元テストが失敗する）
-5. **Actions → DB restore drill → Run workflow** で実行し、成功することを確認する
+### 初回の実行
 
-> **復元確認用プロジェクトの中身は、実行のたびにすべて消えて最新のバックアップに置き換わります。** `RESTORE_DB_URL` に本番の接続文字列を登録しないでください（同じ接続先の場合は実行を中止するようにしていますが、念のため）。
+1. **Actions → DB backup → Run workflow** でバックアップを取り直す（権限を含めるようにした #65 より前のバックアップでは、復元テストが失敗する）
+2. **Actions → DB restore drill → Run workflow** で実行し、成功することを確認する
+
+> 使い捨てのDBは Supabase そのものではないため、Supabase が用意する `auth.uid()` などの関数は最小限のまねで代用しています。データ・RLS・権限・トリガーの確認には十分ですが、本番を作り直す際は次の「復元（手動）」の手順で、新しい Supabase プロジェクトに戻して確認してください。
 
 ## 復元（手動）
 
-本番を直接上書きする前に、まず復元確認用プロジェクトで中身を確認してください。手元のパソコンで行う場合は、PostgreSQL 17 のクライアントと gpg が必要です。
+本番を作り直す場合などに、新しい Supabase プロジェクトへ戻す手順です。本番を直接上書きする前に、まず別のプロジェクトで中身を確認してください（無料プランはプロジェクト2つまでのため、使っていないプロジェクトを一時停止するなどして枠を空ける）。手元のパソコンで行う場合は、PostgreSQL 17 のクライアントと gpg が必要です。
 
 ```bash
 export RESTORE_DB_URL='postgresql://postgres.xxxx:パスワード@aws-0-xxxx.pooler.supabase.com:5432/postgres'
