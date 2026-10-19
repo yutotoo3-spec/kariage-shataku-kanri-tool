@@ -50,6 +50,10 @@ const ACTIONS = {
     label: "メンバーの権限変更",
     summary: d => `${d.email}：${d.old === "owner" ? "管理者" : "メンバー"} → ${d.new === "owner" ? "管理者" : "メンバー"}`,
   },
+  purge_personal_data: {
+    label: "保存期間を過ぎた個人情報の削除",
+    summary: d => `申請 ${d.applications}件・入居者 ${d.tenancies}件・仮申請 ${d.drafts}件`,
+  },
   admin_set_company_status: {
     label: "企業の利用状態の変更（運営者）",
     summary: d => COMPANY_STATUS_LABELS[d.status] || d.status,
