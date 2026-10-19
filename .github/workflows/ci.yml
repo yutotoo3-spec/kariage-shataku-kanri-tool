@@ -50,6 +50,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash supabase/tests/run.sh
+      # バックアップ → 復元の流れ（scripts/backup-db.sh / restore-db.sh）の確認。サーバーと同じ 17 の pg_dump が必要
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-client-17
+      - name: Backup and restore round trip
+        env:
+          PG_BIN: /usr/lib/postgresql/17/bin
+        run: bash supabase/tests/backup_roundtrip.sh
 
   edge-functions:
     name: edge function tests

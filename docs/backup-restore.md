@@ -7,7 +7,7 @@
 | 項目 | 内容 |
 |---|---|
 | 実行 | GitHub Actions（`.github/workflows/db-backup.yml`）が毎日 03:17（日本時間）に自動実行。Actions 画面から手動実行も可能 |
-| 対象 | `public` スキーマ全体（テーブル定義・データ・関数・RLSポリシー）と `auth.users`（ログインユーザー） |
+| 対象 | `public` スキーマ全体（テーブル定義・データ・関数・RLSポリシー・権限）と `auth.users`（ログインユーザー） |
 | 保管 | パスワード（`BACKUP_PASSPHRASE`）で AES256 暗号化し、GitHub Actions の成果物（Artifacts）として **30日間** 保管 |
 | 処理本体 | `scripts/backup-db.sh` |
 
@@ -37,38 +37,48 @@ gpg --decrypt db-backup-YYYYMMDDTHHMMSSZ.tar.gz.gpg | tar -xz
 # → public.dump と auth_users.dump が展開される
 ```
 
-## 復元
+## 復元テスト（毎月自動）
 
-本番を直接上書きする前に、**新しい Supabase プロジェクト（復元確認用）に復元して中身を確認する**のが安全です。
-コマンドには、復元先プロジェクトの Session pooler の接続文字列を使います（PostgreSQL 17 のクライアントが必要）。
+バックアップが「取れている」だけでなく「戻せる」ことを確かめるため、毎月1日に **Actions → DB restore drill** が自動で実行されます（手動実行も可能）。
+
+最新のバックアップを、本番とは別の **復元確認用の Supabase プロジェクト** に戻し、次を確認します（`scripts/restore-db.sh`）。結果は実行画面の **Summary** に表として表示されます（件数のみで、個人情報は表示しません）。
+
+- 主要なテーブルの件数（本番の現在の件数と並べて表示）
+- 全テーブルで RLS（行単位のアクセス制御）が有効か
+- マイグレーションで外した権限が戻っていないか（未ログインでの申請の直接登録・監査ログの更新削除・内部用関数の呼び出し）
+- アプリが使う権限・トリガーが戻っているか
+
+### 初回設定
+
+1. Supabase で **新しいプロジェクト** を作る（例：`kariage-restore-test`。無料プランで可。リージョンは本番と同じ東京を推奨）
+2. 新しいプロジェクトの **Connect → Session pooler** の接続文字列をコピーし、`[YOUR-PASSWORD]` を **そのプロジェクトの** DBパスワードに置き換える
+3. GitHub の **Settings → Secrets and variables → Actions → New repository secret** で登録する
+   - `RESTORE_DB_URL`：2の接続文字列
+4. **Actions → DB backup → Run workflow** でバックアップを取り直す（この変更より前のバックアップは権限を含まないため、復元テストが失敗する）
+5. **Actions → DB restore drill → Run workflow** で実行し、成功することを確認する
+
+> **復元確認用プロジェクトの中身は、実行のたびにすべて消えて最新のバックアップに置き換わります。** `RESTORE_DB_URL` に本番の接続文字列を登録しないでください（同じ接続先の場合は実行を中止するようにしていますが、念のため）。
+
+## 復元（手動）
+
+本番を直接上書きする前に、まず復元確認用プロジェクトで中身を確認してください。手元のパソコンで行う場合は、PostgreSQL 17 のクライアントと gpg が必要です。
 
 ```bash
-RESTORE_DB_URL='postgresql://postgres.xxxx:パスワード@aws-0-xxxx.pooler.supabase.com:5432/postgres'
-
-# 1. ログインユーザー（auth.users）を先に戻す（profiles などが参照しているため）
-pg_restore --dbname="$RESTORE_DB_URL" --data-only auth_users.dump
-
-# 2. アプリのデータ（テーブル・関数・RLSポリシー・データ）を戻す
-pg_restore --dbname="$RESTORE_DB_URL" --no-owner --no-privileges public.dump
+export RESTORE_DB_URL='postgresql://postgres.xxxx:パスワード@aws-0-xxxx.pooler.supabase.com:5432/postgres'
+export BACKUP_PASSPHRASE='暗号化パスワード'
+export SUPABASE_DB_URL='本番の接続文字列'   # 本番との取り違え防止のため（任意）
+scripts/restore-db.sh db-backup-YYYYMMDDTHHMMSSZ.tar.gz.gpg
 ```
 
-- 2 で `schema "public" already exists` というエラーが1件出ますが、問題ありません
-- 復元後、主要なテーブルの件数を元と比べて確認する
-
-```sql
-select 'companies' as t, count(*) from companies union all
-select 'profiles', count(*) from profiles union all
-select 'applications', count(*) from applications union all
-select 'tenancies', count(*) from tenancies union all
-select 'rent_history', count(*) from rent_history;
-```
+`restore-db.sh` は、復元先の `public` スキーマとログインユーザーを **すべて削除してから** バックアップの内容で作り直し、上記の確認を行います。
 
 ### 注意
 
-- **データだけを既存のテーブルに戻す（`--data-only`）のは避けてください。** 申請・監査ログのトリガーが動き、ステータスや日時・操作者が上書きされます。上記のようにテーブルごと復元すると、トリガーはデータを戻した後に作られるため上書きは起きません
+- **データだけを既存のテーブルに戻す（`--data-only`）のは避けてください。** 申請・監査ログのトリガーが動き、ステータスや日時・操作者が上書きされます。`restore-db.sh` はテーブルごと作り直すため、データを戻した後にトリガーが作られ、上書きは起きません
+- バックアップに含まれないもの：二要素認証の登録（`auth.mfa_factors`）、ログイン方法の紐付け（`auth.identities`）、Edge Function と Secret、Supabase の Authentication の設定。本番を作り直す場合はこれらを別途設定し、利用者には二要素認証の再登録をお願いする
 - 本番を戻す必要がある場合は、作業前に必ずその時点のバックアップを手動実行で取ってから行ってください
 
 ## 定期的な確認
 
 - 月に1回程度、Actions の実行履歴が成功しているかを確認する（失敗すると GitHub から通知メールが届きます）
-- 半年に1回程度、復元確認用プロジェクトへの復元を試し、手順が古くなっていないかを確認する
+- 毎月の DB restore drill が成功しているかを確認する（失敗すると GitHub から通知メールが届きます）

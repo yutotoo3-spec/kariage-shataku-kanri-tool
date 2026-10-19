@@ -1,0 +1,88 @@
+# バックアップから本当に復元できるかを確かめる（復元テスト）
+# 最新の「DB backup」の成果物（暗号化バックアップ）を、本番とは別の復元確認用 Supabase プロジェクトに戻し、
+# データ・RLS・権限・トリガーが戻っていることを検証する。結果は実行画面の Summary に表示される。
+# 事前に、リポジトリの Settings → Secrets and variables → Actions に次を登録すること:
+#   RESTORE_DB_URL    … 復元確認用プロジェクトの Session pooler の接続文字列（中身はすべて消えるので本番は絶対に指定しない）
+#   SUPABASE_DB_URL / BACKUP_PASSPHRASE … バックアップと同じもの（本番との取り違え防止・件数比較・復号に使う）
+# 手順の詳細は docs/backup-restore.md を参照。
+name: DB restore drill
+
+on:
+  schedule:
+    # 毎月1日 04:23（日本時間）= 前日 19:23（UTC）。毎日のバックアップ（03:17）の後に実行する
+    - cron: "23 19 28-31 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: db-restore-drill
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      # cron では「毎月最終日」を直接指定できないため、28〜31日に起動して翌日が1日の日だけ実行する
+      - name: Check schedule
+        id: when
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$(date -u -d tomorrow +%d)" != "01" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.when.outputs.run == 'true'
+
+      - name: Check secrets
+        if: steps.when.outputs.run == 'true'
+        env:
+          RESTORE_DB_URL: ${{ secrets.RESTORE_DB_URL }}
+        run: |
+          if [ -z "$RESTORE_DB_URL" ]; then
+            echo "::error::Secret RESTORE_DB_URL が登録されていません（docs/backup-restore.md の「復元テスト」を参照）"
+            exit 1
+          fi
+
+      - name: Find latest backup
+        if: steps.when.outputs.run == 'true'
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow db-backup.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          if [ -z "$run_id" ]; then
+            echo "::error::成功した DB backup の実行が見つかりません。先に DB backup を実行してください"
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download backup
+        if: steps.when.outputs.run == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ steps.latest.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: backup
+
+      - name: Install PostgreSQL 17 client
+        if: steps.when.outputs.run == 'true'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-client-17
+
+      - name: Restore and verify
+        if: steps.when.outputs.run == 'true'
+        env:
+          RESTORE_DB_URL: ${{ secrets.RESTORE_DB_URL }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          PG_BIN: /usr/lib/postgresql/17/bin
+        run: scripts/restore-db.sh "$(find backup -name 'db-backup-*.tar.gz.gpg' | head -1)"

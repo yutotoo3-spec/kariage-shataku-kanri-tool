@@ -39,7 +39,7 @@
 | 申請受付 | Supabase Edge Function（`supabase/functions/submit-application`） |
 | 公開（ホスティング） | Vercel。`main` にマージすると自動で本番に反映される |
 | 自動テスト | GitHub Actions（`.github/workflows/ci.yml`） |
-| バックアップ | GitHub Actions で毎日暗号化バックアップ（`docs/backup-restore.md`） |
+| バックアップ | GitHub Actions で毎日暗号化バックアップ、毎月1日に復元テスト（`docs/backup-restore.md`） |
 
 金額計算は画面（`src/utils/calc.js`）とデータベース（`calc_rent_burden` 関数）の両方にあります。**最終的な金額はデータベース側で計算し直す**ため、画面の値を書き換えられても改ざんにはなりません。計算式を変えるときは両方を直し、`tests/fixtures/burden-cases.json` のテストケースで一致を確認してください。
 
