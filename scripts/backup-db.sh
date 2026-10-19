@@ -20,8 +20,10 @@ stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-# アプリのデータ（public スキーマのテーブル定義・データ・関数・RLSポリシー）
-"$pg_dump" "$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges \
+# アプリのデータ（public スキーマのテーブル定義・データ・関数・RLSポリシー・権限）
+# 権限（GRANT/REVOKE）も含める。含めないと、マイグレーションで外した権限（未ログインでの申請の直接登録、
+# 監査ログの更新・削除など）が復元先の既定の権限に戻ってしまう
+"$pg_dump" "$SUPABASE_DB_URL" --format=custom --no-owner \
   --schema=public --file="$work/public.dump"
 
 # ログインユーザー（profiles と紐付けるため。パスワードはハッシュ化された状態で含まれる）
