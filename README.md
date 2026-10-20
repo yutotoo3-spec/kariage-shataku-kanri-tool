@@ -70,6 +70,7 @@ npm run dev            # http://localhost:5173 で起動
 | `npm test` | 画面側のテスト（Vitest） |
 | `npm run build` | 本番用ファイルの作成 |
 | `npm run test:db` | データベースのテスト（PostgreSQL が必要。CI では自動実行） |
+| `npm run test:e2e` | 画面を自動操作する E2E テスト（手順は `e2e/README.md`。CI では自動実行） |
 
 ## マイグレーション（データベースの変更）
 
@@ -128,7 +129,7 @@ where user_id = (select id from auth.users where email = '対象者のメール�
 ## リリース手順
 
 1. **PR を作る**：変更はブランチで行い、PR（プルリクエスト）を作成する
-2. **自動テストを確認**：PR の CI（lint / test / build・database tests・edge function tests）がすべて緑になるのを待つ
+2. **自動テストを確認**：PR の CI（lint / test / build・database tests・edge function tests・e2e tests）がすべて緑になるのを待つ
 3. **プレビューで確認**：PR に Vercel が付けるプレビュー URL で画面を確認する（申請フォームの送信は本番のドメインでしか通らない）
 4. **マージ**：`main` にマージすると Vercel が自動で本番に反映する
 5. **SQL を実行**：PR に新しいマイグレーションが含まれる場合、Supabase の SQL Editor で実行する（実行の順番に注意があるものは PR に記載）
