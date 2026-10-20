@@ -74,3 +74,39 @@ jobs:
       # リポジトリ直下の package.json（画面側）の node_modules を使わないよう、Edge Function 用の設定を明示する
       - run: deno check --config supabase/functions/deno.json supabase/functions/submit-application/index.ts
       - run: deno test --config supabase/functions/deno.json --allow-env supabase/functions/
+
+  e2e:
+    name: e2e tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # 使い捨てのステージング：この実行の中だけで Supabase 一式（DB・ログイン・API）を立ち上げ、全マイグレーションを流す。
+      # 本番の Supabase には接続しない。使わない機能（管理画面・ストレージなど）は起動しない
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.121.0
+      - run: supabase start -x studio,imgproxy,logflare,vector,supavisor,realtime,storage-api,mailpit,postgres-meta
+      - name: Export local Supabase settings
+        # 値はこの実行の中だけで使うテスト用の鍵（本番の鍵ではない）。GITHUB_ENV は引用符を外さないので外してから書く
+        run: supabase status -o env | sed -nE 's/^([A-Z_]+)="(.*)"$/\1=\2/p' >> "$GITHUB_ENV"
+      - run: bash e2e/seed.sh
+      - run: npx playwright install --with-deps chromium
+      - name: Run E2E tests
+        env:
+          VITE_SUPABASE_URL: ${{ env.API_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.ANON_KEY }}
+          # Cloudflare が公開しているテスト用のサイトキー（常に成功する）
+          VITE_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
