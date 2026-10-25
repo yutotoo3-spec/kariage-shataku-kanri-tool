@@ -140,3 +140,7 @@ where user_id = (select id from auth.users where email = '対象者のメール�
 
 - `docs/turnstile.md`：申請フォームの CAPTCHA の設定
 - `docs/backup-restore.md`：バックアップと復元の手順
+
+## ライセンス
+
+[MIT License](LICENSE) です。著作権表示とライセンス文を残せば、自由に利用・改変・再配布できます。無保証です。
